@@ -360,8 +360,8 @@ body { background: var(--bg); color: var(--text); font-family: 'PingFang TC','No
         </div>
       </div>
       <div class="field">
-        <label>發票／流水號</label>
-        <input type="text" id="invoice" placeholder="發票號碼" style="text-transform:uppercase">
+        <label>發票／流水號 <span style="color:var(--text3);font-weight:400;">（選填，月結可填「月結」）</span></label>
+        <input type="text" id="invoice" placeholder="發票號碼（月結廠商填「月結」）" style="text-transform:uppercase">
       </div>
     </div>
     <div class="preview-row">
@@ -695,23 +695,23 @@ function removePhoto(i) {
 async function saveEntry() {
   const isMisc = document.getElementById('miscCheck').checked;
   const date = document.getElementById('entryDate').value;
-  const qty = parseFloat(document.getElementById('qty').value);
-  const price = parseFloat(document.getElementById('price').value);
   const vendor = document.getElementById('vendor').value.trim();
   const invoice = document.getElementById('invoice').value.trim().toUpperCase();
 
+  // 驗證
   if (currentStore === 0) {
-    document.getElementById('storeHint').style.display = 'block';
+    const hint = document.getElementById('storeHint');
+    if (hint) hint.style.display = 'block';
     toast('❌ 請先選擇店別', true);
     window.scrollTo({top:0, behavior:'smooth'});
     return;
   }
-  document.getElementById('storeHint') && (document.getElementById('storeHint').style.display = 'none');
+  const hint = document.getElementById('storeHint');
+  if (hint) hint.style.display = 'none';
   if (!date) { toast('❌ 請選擇日期', true); return; }
-  if (isNaN(qty)||qty<=0) { toast('❌ 請輸入數量', true); return; }
-  if (isNaN(price)||price<0) { toast('❌ 請輸入單價', true); return; }
   if (!vendor) { toast('❌ 請填寫廠商', true); document.getElementById('vendor').focus(); return; }
-  if (!invoice) { toast('❌ 請填寫發票號碼', true); document.getElementById('invoice').focus(); return; }
+  // 發票：選填，但提示月結廠商可填「月結」
+  // invoice 不強制驗證
 
   let code='', name='', spec='', unit='', cat='';
   if (isMisc) {
@@ -740,12 +740,11 @@ async function saveEntry() {
       total = Math.round(sub * (1 + taxRate));
     }
     finalPrice = finalQty > 0 ? Math.round((sub / finalQty) * 100) / 100 : 0;
-    qty = finalQty;
-    price = finalPrice;
   } else {
     finalQty = parseFloat(document.getElementById('qty').value)||0;
     finalPrice = parseFloat(document.getElementById('price').value)||0;
-    qty = finalQty; price = finalPrice;
+    if (isNaN(finalQty)||finalQty<=0) { toast('❌ 請輸入數量', true); return; }
+    if (isNaN(finalPrice)||finalPrice<0) { toast('❌ 請輸入單價', true); return; }
     if (inputMode === 'posttax') {
       total = Math.round(qty * price);
       sub = taxRate > 0 ? Math.round(total / (1 + taxRate)) : total;
@@ -759,7 +758,7 @@ async function saveEntry() {
   // Show uploading
   document.getElementById('uploadingOverlay').style.display = 'flex';
   document.getElementById('uploadingMsg').textContent = '儲存中...';
-  setSyncDot('syncing');
+  if (typeof setSyncDot === 'function') setSyncDot('syncing');
 
   try {
     document.getElementById('uploadingMsg').textContent = '儲存記錄...';
