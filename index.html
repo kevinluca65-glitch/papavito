@@ -1,0 +1,599 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<title>Papa Vito 進貨快速輸入</title>
+<style>
+  :root {
+    --bg: #0f0f0f;
+    --surface: #1a1a1a;
+    --surface2: #242424;
+    --border: #2e2e2e;
+    --accent: #e8502a;
+    --accent2: #ff6b47;
+    --text: #f0ede8;
+    --text2: #9a9590;
+    --text3: #5a5550;
+    --green: #4caf72;
+    --yellow: #f5a623;
+    --radius: 12px;
+    --font: 'PingFang TC', 'Noto Sans TC', 'Microsoft JhengHei', sans-serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  body { background: var(--bg); color: var(--text); font-family: var(--font); min-height: 100vh; overflow-x: hidden; }
+
+  /* HEADER */
+  .header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 14px 16px; position: sticky; top: 0; z-index: 100; display: flex; align-items: center; gap: 12px; }
+  .logo { width: 36px; height: 36px; background: var(--accent); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0; }
+  .header-title { flex: 1; }
+  .header-title h1 { font-size: 16px; font-weight: 700; letter-spacing: 0.5px; }
+  .header-title p { font-size: 11px; color: var(--text2); margin-top: 1px; }
+  .record-count { background: var(--accent); color: white; border-radius: 20px; padding: 3px 10px; font-size: 12px; font-weight: 700; flex-shrink: 0; }
+
+  /* TABS */
+  .tabs { display: flex; background: var(--surface); border-bottom: 1px solid var(--border); }
+  .tab { flex: 1; padding: 12px 8px; text-align: center; font-size: 13px; font-weight: 600; color: var(--text2); cursor: pointer; border-bottom: 2px solid transparent; transition: all 0.2s; }
+  .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+  /* PANEL */
+  .panel { display: none; padding: 16px; }
+  .panel.active { display: block; }
+
+  /* FORM CARD */
+  .form-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; margin-bottom: 14px; }
+  .form-card h3 { font-size: 12px; font-weight: 700; color: var(--accent); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 14px; }
+
+  /* INPUTS */
+  .field { margin-bottom: 12px; }
+  .field label { display: block; font-size: 12px; color: var(--text2); margin-bottom: 5px; font-weight: 600; }
+  .field input, .field select { width: 100%; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 11px 12px; color: var(--text); font-size: 15px; font-family: var(--font); appearance: none; outline: none; transition: border-color 0.2s; }
+  .field input:focus, .field select:focus { border-color: var(--accent); }
+  .field input::placeholder { color: var(--text3); }
+  .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .field-row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+
+  /* SEARCH */
+  .search-wrap { position: relative; }
+  .search-wrap input { padding-left: 36px; }
+  .search-icon { position: absolute; left: 11px; top: 50%; transform: translateY(-50%); color: var(--text3); font-size: 16px; pointer-events: none; }
+  .search-results { position: absolute; left: 0; right: 0; background: var(--surface2); border: 1px solid var(--accent); border-top: none; border-radius: 0 0 10px 10px; z-index: 200; max-height: 220px; overflow-y: auto; box-shadow: 0 8px 24px rgba(0,0,0,0.6); }
+  .search-result-item { padding: 11px 14px; cursor: pointer; border-bottom: 1px solid var(--border); transition: background 0.15s; }
+  .search-result-item:last-child { border-bottom: none; }
+  .search-result-item:active, .search-result-item:hover { background: var(--border); }
+  .sri-name { font-size: 14px; font-weight: 600; }
+  .sri-meta { font-size: 11px; color: var(--text2); margin-top: 2px; }
+  .sri-code { color: var(--accent); font-weight: 700; }
+
+  /* SELECTED ITEM BADGE */
+  .selected-badge { background: var(--surface2); border: 1px solid var(--green); border-radius: 8px; padding: 10px 12px; margin-top: 8px; display: none; }
+  .selected-badge.visible { display: flex; align-items: center; gap: 10px; }
+  .sb-code { background: var(--green); color: white; border-radius: 5px; padding: 2px 8px; font-size: 11px; font-weight: 800; flex-shrink: 0; }
+  .sb-info { flex: 1; }
+  .sb-name { font-size: 14px; font-weight: 700; }
+  .sb-spec { font-size: 11px; color: var(--text2); margin-top: 1px; }
+  .sb-clear { color: var(--text3); font-size: 18px; cursor: pointer; padding: 4px; }
+
+  /* BUTTONS */
+  .btn-primary { width: 100%; background: var(--accent); color: white; border: none; border-radius: 10px; padding: 14px; font-size: 16px; font-weight: 700; font-family: var(--font); cursor: pointer; transition: background 0.2s; letter-spacing: 0.5px; }
+  .btn-primary:active { background: var(--accent2); }
+  .btn-secondary { background: var(--surface2); color: var(--text); border: 1px solid var(--border); border-radius: 10px; padding: 11px; font-size: 14px; font-weight: 600; font-family: var(--font); cursor: pointer; transition: all 0.2s; }
+  .btn-secondary:active { background: var(--border); }
+  .btn-danger { background: #2a1515; color: #e05050; border: 1px solid #4a2020; border-radius: 8px; padding: 6px 12px; font-size: 12px; font-family: var(--font); cursor: pointer; }
+  .btn-export { width: 100%; background: var(--green); color: white; border: none; border-radius: 10px; padding: 14px; font-size: 16px; font-weight: 700; font-family: var(--font); cursor: pointer; margin-bottom: 10px; }
+
+  /* STORE TOGGLE */
+  .store-toggle { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px; }
+  .store-btn { background: var(--surface2); border: 2px solid var(--border); border-radius: 8px; padding: 10px; text-align: center; cursor: pointer; transition: all 0.2s; font-weight: 700; font-size: 14px; }
+  .store-btn.active { border-color: var(--accent); color: var(--accent); background: rgba(232,80,42,0.08); }
+
+  /* TAX TOGGLE */
+  .tax-toggle { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; }
+  .tax-btn { background: var(--surface2); border: 1px solid var(--border); border-radius: 7px; padding: 8px 4px; text-align: center; cursor: pointer; font-size: 12px; font-weight: 700; color: var(--text2); transition: all 0.2s; }
+  .tax-btn.active { border-color: var(--yellow); color: var(--yellow); background: rgba(245,166,35,0.08); }
+
+  /* DATE QUICK */
+  .date-quick { display: flex; gap: 6px; margin-top: 6px; }
+  .dq-btn { flex: 1; background: var(--surface2); border: 1px solid var(--border); border-radius: 6px; padding: 7px 4px; text-align: center; font-size: 11px; font-weight: 600; color: var(--text2); cursor: pointer; }
+  .dq-btn:active { background: var(--border); }
+
+  /* RECORDS LIST */
+  .records-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+  .records-count { font-size: 13px; color: var(--text2); }
+  .record-item { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; margin-bottom: 8px; }
+  .ri-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+  .ri-name { font-size: 14px; font-weight: 700; flex: 1; }
+  .ri-amount { font-size: 15px; font-weight: 800; color: var(--yellow); flex-shrink: 0; }
+  .ri-meta { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 7px; }
+  .ri-tag { background: var(--surface2); border-radius: 4px; padding: 2px 7px; font-size: 11px; color: var(--text2); }
+  .ri-tag.store1 { color: #5ba5e8; }
+  .ri-tag.store2 { color: #c97be8; }
+  .empty-state { text-align: center; padding: 48px 24px; color: var(--text3); }
+  .empty-state .emoji { font-size: 48px; margin-bottom: 12px; }
+  .empty-state p { font-size: 14px; line-height: 1.6; }
+
+  /* TOAST */
+  .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(20px); background: var(--green); color: white; padding: 10px 20px; border-radius: 20px; font-size: 14px; font-weight: 700; opacity: 0; transition: all 0.3s; z-index: 1000; pointer-events: none; white-space: nowrap; }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  /* MISC INPUT */
+  .misc-section { background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 12px; margin-bottom: 12px; }
+  .misc-section p { font-size: 12px; color: var(--text2); margin-bottom: 8px; }
+
+  /* SCROLLBAR */
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit:scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="logo">🍕</div>
+  <div class="header-title">
+    <h1>Papa Vito 進貨工具</h1>
+    <p>快速輸入，月底匯出CSV</p>
+  </div>
+  <div class="record-count" id="headerCount">0 筆</div>
+</div>
+
+<div class="tabs">
+  <div class="tab active" onclick="switchTab('input')">📝 輸入進貨</div>
+  <div class="tab" onclick="switchTab('records')">📋 今日記錄</div>
+  <div class="tab" onclick="switchTab('export')">📤 匯出</div>
+</div>
+
+<!-- INPUT PANEL -->
+<div class="panel active" id="panel-input">
+
+  <!-- Store selector -->
+  <div class="form-card">
+    <h3>店別</h3>
+    <div class="store-toggle">
+      <div class="store-btn active" id="storeBtn1" onclick="setStore(1)">🏠 天母店（1店）</div>
+      <div class="store-btn" id="storeBtn2" onclick="setStore(2)">🏪 昌吉店（2店）</div>
+    </div>
+  </div>
+
+  <!-- Item search -->
+  <div class="form-card">
+    <h3>品項搜尋</h3>
+    <div class="field">
+      <label>搜尋品項名稱或識別碼</label>
+      <div class="search-wrap">
+        <span class="search-icon">🔍</span>
+        <input type="text" id="searchInput" placeholder="輸入品項名稱或代號（如 B001、起司）" autocomplete="off" oninput="onSearch()">
+        <div class="search-results" id="searchResults" style="display:none;"></div>
+      </div>
+    </div>
+    <div class="selected-badge" id="selectedBadge">
+      <span class="sb-code" id="sbCode"></span>
+      <div class="sb-info">
+        <div class="sb-name" id="sbName"></div>
+        <div class="sb-spec" id="sbSpec"></div>
+      </div>
+      <span class="sb-clear" onclick="clearSelected()">✕</span>
+    </div>
+
+    <!-- Misc item toggle -->
+    <div style="margin-top:10px;">
+      <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text2);cursor:pointer;">
+        <input type="checkbox" id="miscCheck" onchange="toggleMisc()" style="width:16px;height:16px;accent-color:var(--accent);">
+        無識別碼的雜支（水電、薪資等）
+      </label>
+    </div>
+    <div class="misc-section" id="miscSection" style="display:none;margin-top:10px;">
+      <p>輸入類別及品項描述</p>
+      <div class="field-row">
+        <div class="field" style="margin-bottom:0">
+          <label>費用類別</label>
+          <select id="miscCat">
+            <option value="2.8、水費">水費</option>
+            <option value="2.9、電費">電費</option>
+            <option value="2.10、瓦斯費">瓦斯費</option>
+            <option value="1.1.2、兼職薪資">兼職薪資</option>
+            <option value="1、食材成本">食材成本</option>
+            <option value="2.3、物料消耗">物料消耗</option>
+            <option value="2.5、廣告費用">廣告費用</option>
+            <option value="2.6、運雜費">運雜費</option>
+            <option value="2.11、修繕費">修繕費</option>
+            <option value="2.13、文具費">文具費</option>
+            <option value="2.16、其他費用">其他費用</option>
+            <option value="2.17、外送費">外送費</option>
+            <option value="3.4、店面租賃費">租賃費</option>
+            <option value="3.6、諮詢服務費">諮詢服務費</option>
+            <option value="4.3、手續費">手續費</option>
+          </select>
+        </div>
+        <div class="field" style="margin-bottom:0">
+          <label>品項描述</label>
+          <input type="text" id="miscName" placeholder="如：台北水費11501">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Entry details -->
+  <div class="form-card">
+    <h3>進貨資料</h3>
+
+    <div class="field">
+      <label>日期</label>
+      <input type="date" id="entryDate">
+      <div class="date-quick">
+        <div class="dq-btn" onclick="setDateToday()">今天</div>
+        <div class="dq-btn" onclick="setDateYesterday()">昨天</div>
+        <div class="dq-btn" onclick="setDate2DaysAgo()">前天</div>
+      </div>
+    </div>
+
+    <div class="field-row">
+      <div class="field">
+        <label>數量</label>
+        <input type="number" id="qty" placeholder="0" step="0.1" min="0" inputmode="decimal">
+      </div>
+      <div class="field">
+        <label>未稅單價（元）</label>
+        <input type="number" id="price" placeholder="0" step="0.01" min="0" inputmode="decimal">
+      </div>
+    </div>
+
+    <div class="field">
+      <label>稅別</label>
+      <div class="tax-toggle">
+        <div class="tax-btn active" id="taxBtn0" onclick="setTax(0)">免稅（0）</div>
+        <div class="tax-btn" id="taxBtn005" onclick="setTax(0.05)">應稅 5%</div>
+        <div class="tax-btn" id="taxBtn5" onclick="setTax(5)">其他</div>
+      </div>
+    </div>
+
+    <div class="field-row">
+      <div class="field">
+        <label>廠商／備註</label>
+        <input type="text" id="vendor" placeholder="廠商名稱">
+      </div>
+      <div class="field">
+        <label>發票／流水號</label>
+        <input type="text" id="invoice" placeholder="發票號碼" style="text-transform:uppercase;">
+      </div>
+    </div>
+
+    <!-- Preview total -->
+    <div style="background:var(--surface2);border-radius:8px;padding:10px 12px;margin-top:4px;display:flex;justify-content:space-between;align-items:center;">
+      <span style="font-size:12px;color:var(--text2);">含稅金額預覽</span>
+      <span style="font-size:18px;font-weight:800;color:var(--yellow);" id="totalPreview">—</span>
+    </div>
+  </div>
+
+  <button class="btn-primary" onclick="saveEntry()">✅ 儲存這筆進貨</button>
+</div>
+
+<!-- RECORDS PANEL -->
+<div class="panel" id="panel-records">
+  <div class="records-header">
+    <span class="records-count" id="recordsCount">共 0 筆</span>
+    <button class="btn-danger" onclick="clearAllRecords()">清空全部</button>
+  </div>
+  <div id="recordsList"></div>
+</div>
+
+<!-- EXPORT PANEL -->
+<div class="panel" id="panel-export">
+  <div class="form-card">
+    <h3>匯出設定</h3>
+    <div class="field">
+      <label>匯出格式</label>
+      <select id="exportFormat">
+        <option value="csv">CSV（可直接貼入Excel）</option>
+      </select>
+    </div>
+    <p style="font-size:12px;color:var(--text2);line-height:1.6;margin-bottom:14px;">
+      匯出後，開啟Excel → 選擇您的進貨表工作表 → 在最後一行空白處貼上資料即可。欄位順序與您原本的進貨表完全一致。
+    </p>
+    <button class="btn-export" onclick="exportCSV()">📥 下載 CSV 檔</button>
+    <button class="btn-secondary" style="width:100%;" onclick="copyCSV()">📋 複製到剪貼板</button>
+  </div>
+
+  <div class="form-card">
+    <h3>資料統計</h3>
+    <div id="statsContent" style="font-size:13px;color:var(--text2);line-height:2;"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ============ ITEM DATABASE ============
+const ITEMS = [{"code":"A001","name":"台糖精緻細砂","spec":"KG/包","unit":"包","cat":"食材-乾貨"},{"code":"A002","name":"高濃度巴沙米可醋-PONTI","spec":"250ML/罐","unit":"罐","cat":"食材-乾貨"},{"code":"A003","name":"油漬番茄乾RISTRORIS","spec":"800G/罐","unit":"罐","cat":"食材-乾貨"},{"code":"A004","name":"千層麵(BARONIA)500G","spec":"500G/包","unit":"包","cat":"食材-乾貨"},{"code":"A005","name":"海鹽(細)(SOSALT)(1KG)","spec":"1KG/包","unit":"KG","cat":"食材-乾貨"},{"code":"A006","name":"杜蘭麥粉(1K)CAPUTO","spec":"1KG/包","unit":"包","cat":"食材-乾貨"},{"code":"A007","name":"特級橄欖油3L COSTA D'ORO","spec":"3L/罐","unit":"罐","cat":"食材-乾貨"},{"code":"A008","name":"特級橄欖油1L COPPINI","spec":"1L/瓶","unit":"瓶","cat":"食材-乾貨"},{"code":"A009","name":"酸豆(小顆)","spec":"285G/罐","unit":"罐","cat":"食材-乾貨"},{"code":"A010","name":"烤盤油-卡羅","spec":"630G/罐","unit":"罐","cat":"食材-乾貨"},{"code":"A011","name":"巴沙米可醋(小)BALSAMIC-PONTI","spec":"500ML/瓶","unit":"瓶","cat":"食材-乾貨"},{"code":"A012","name":"去皮番茄(大)-喬爾CIAO","spec":"2500G/罐","unit":"罐","cat":"食材-乾貨"},{"code":"A013","name":"切片黑橄欖","spec":"3KG/罐","unit":"罐","cat":"食材-乾貨"},{"code":"A014","name":"墨西哥青椒片(大)-RICOS","spec":"2.83G/罐","unit":"罐","cat":"食材-乾貨"},{"code":"A015","name":"濃縮番茄基底醬(亨氏)2.98KG","spec":"2.98KG/罐","unit":"罐","cat":"食材-乾貨"},{"code":"A016","name":"起司醬(原味)RICOS","spec":"3KG/罐","unit":"罐","cat":"食材-乾貨"},{"code":"A017","name":"保久乳1L","spec":"1L/瓶","unit":"瓶","cat":"食材-乾貨"},{"code":"A018","name":"桂林鳳梨片","spec":"12罐/箱","unit":"罐","cat":"食材-乾貨"},{"code":"A019","name":"ARBELLA彎管麵500G","spec":"500G/包","unit":"包","cat":"食材-乾貨"},{"code":"A020","name":"小鯷魚(中)","spec":"350G/罐","unit":"罐","cat":"食材-乾貨"},{"code":"A021","name":"烘焙專用粉-(紅)CAPUTO","spec":"25KG/包","unit":"包","cat":"食材-乾貨"},{"code":"A022","name":"PIZZA專用粉(大)-藍CAPUTO","spec":"25KG/包","unit":"包","cat":"食材-乾貨"},{"code":"A023","name":"PIZZA專用粉羅馬氏(大)CAPUTO","spec":"25KG/包","unit":"包","cat":"食材-乾貨"},{"code":"A024","name":"綠橄欖(無子)(liberitas)935g","spec":"935G/罐","unit":"罐","cat":"食材-乾貨"},{"code":"A025","name":"OREO ORIGINAL","spec":"116G/包","unit":"包","cat":"食材-乾貨"},{"code":"A026","name":"ARBELLA螺絲麵500G","spec":"500G/包","unit":"包","cat":"食材-乾貨"},{"code":"A027","name":"義大利綜合香辛料","spec":"250G/包","unit":"包","cat":"食材-乾貨"},{"code":"A028","name":"珍釀白醋","spec":"600ML/罐","unit":"罐","cat":"食材-乾貨"},{"code":"A029","name":"焦糖醬","spec":"476G/瓶","unit":"瓶","cat":"食材-乾貨"},{"code":"A030","name":"KS蜂蜜","spec":"680G/瓶","unit":"瓶","cat":"食材-乾貨"},{"code":"A031","name":"TABASCO 350ML","spec":"350ML/瓶","unit":"瓶","cat":"食材-乾貨"},{"code":"A032","name":"TABASCO 60ML","spec":"60ML/瓶","unit":"瓶","cat":"食材-乾貨"},{"code":"A033","name":"老樹特級冷橄欖油2L","spec":"2L/罐","unit":"罐","cat":"食材-乾貨"},{"code":"A034","name":"沙丁魚(特級橄欖油漬)ANI","spec":"90G/罐","unit":"罐","cat":"食材-乾貨"},{"code":"A035","name":"吉利丁片","spec":"KG/盒","unit":"盒","cat":"食材-乾貨"},{"code":"A036","name":"新康寶香菇湯塊","spec":"10塊/盒","unit":"盒","cat":"食材-乾貨"},{"code":"A037","name":"憶霖辣椒片","spec":"1G/包","unit":"包","cat":"食材-乾貨"},{"code":"A038","name":"飛馬細粉紅辣椒","spec":"300G/包","unit":"包","cat":"食材-乾貨"},{"code":"A039","name":"飛馬粗片紅辣椒","spec":"300G/包","unit":"包","cat":"食材-乾貨"},{"code":"A040","name":"紅椒粉（辣）-大-西班牙","spec":"350G/罐","unit":"罐","cat":"食材-乾貨"},{"code":"A041","name":"蕾娜思香草香精","spec":"28ML/罐","unit":"罐","cat":"食材-乾貨"},{"code":"A042","name":"小磨坊白胡椒粉","spec":"25G/罐","unit":"罐","cat":"食材-乾貨"},{"code":"A043","name":"匈牙利紅椒粉(小磨坊)","spec":"1KG/包","unit":"包","cat":"食材-乾貨"},{"code":"A044","name":"黑胡椒粉(小磨坊)(粗)","spec":"600G/包","unit":"包","cat":"食材-乾貨"},{"code":"A045","name":"魯包（小磨坊）10粒/包","spec":"10粒/包","unit":"包","cat":"食材-乾貨"},{"code":"A046","name":"小磨坊調和白胡椒粉","spec":"200G/包","unit":"包","cat":"食材-乾貨"},{"code":"A047","name":"匈牙利紅椒粉(小磨坊)(小罐)","spec":"22G/罐","unit":"罐","cat":"食材-乾貨"},{"code":"A048","name":"小磨坊粗粒黑胡椒","spec":"45G/罐","unit":"罐","cat":"食材-乾貨"},{"code":"A049","name":"小磨坊湯用胡椒粉","spec":"26G/罐","unit":"罐","cat":"食材-乾貨"},{"code":"A050","name":"小磨坊迷迭香","spec":"20G/罐","unit":"罐","cat":"食材-乾貨"},{"code":"A051","name":"小磨坊新疆孜然","spec":"24G/罐","unit":"罐","cat":"食材-乾貨"},{"code":"A052","name":"小磨坊月桂葉","spec":"250G/包","unit":"包","cat":"食材-乾貨"},{"code":"A053","name":"飛馬披薩粉","spec":"10G/罐","unit":"罐","cat":"食材-乾貨"},{"code":"A054","name":"飛馬洋香菜葉","spec":"7G/罐","unit":"罐","cat":"食材-乾貨"},{"code":"A055","name":"味好美辣椒粉","spec":"28G/罐","unit":"罐","cat":"食材-乾貨"},{"code":"A056","name":"味好美肉桂粉","spec":"26G/罐","unit":"罐","cat":"食材-乾貨"},{"code":"A057","name":"味好美白胡椒鹽","spec":"60G/罐","unit":"罐","cat":"食材-乾貨"},{"code":"A058","name":"冠利精選蘋果醋","spec":"250ML/瓶","unit":"瓶","cat":"食材-乾貨"},{"code":"A059","name":"榮冠五香粉","spec":"27G/罐","unit":"罐","cat":"食材-乾貨"},{"code":"A060","name":"台糖精緻特砂","spec":"KG/包","unit":"包","cat":"食材-乾貨"},{"code":"A061","name":"台糖貳號砂糖","spec":"KG/包","unit":"包","cat":"食材-乾貨"},{"code":"A062","name":"台鹽高級碘鹽","spec":"KG/包","unit":"包","cat":"食材-乾貨"},{"code":"A063","name":"特選豆豉","spec":"40G/包","unit":"包","cat":"食材-乾貨"},{"code":"A064","name":"壺底豆鼓","spec":"","unit":"包","cat":"食材-乾貨"},{"code":"A065","name":"特級糖粉","spec":"KG/包","unit":"包","cat":"食材-乾貨"},{"code":"A066","name":"克寧姆預拌粉","spec":"500G/包","unit":"包","cat":"食材-乾貨"},{"code":"A067","name":"BASSE脆餅綜合包","spec":"","unit":"包","cat":"食材-乾貨"},{"code":"A068","name":"KS鹽烤開心果核仁","spec":"","unit":"包","cat":"食材-乾貨"},{"code":"A069","name":"玉米粒Dailyfun","spec":"340G/罐","unit":"罐","cat":"食材-乾貨"},{"code":"A070","name":"芥末醬(倒罐)亨氏","spec":"226G/罐","unit":"罐","cat":"食材-乾貨"},{"code":"A071","name":"鮪魚(油)-大-遠洋","spec":"1.88KG/罐","unit":"罐","cat":"食材-乾貨"},{"code":"A072","name":"紅甜椒 12/390 G","spec":"390G/罐","unit":"罐","cat":"食材-乾貨"},{"code":"A073","name":"HEINZ番茄醬3瓶","spec":"3瓶/組","unit":"瓶","cat":"食材-乾貨"},{"code":"A074","name":"KS玉米片","spec":"","unit":"包","cat":"食材-乾貨"},{"code":"A075","name":"無籽黑橄欖(大)Liberitas","spec":"3KG/罐","unit":"罐","cat":"食材-乾貨"},{"code":"A076","name":"酸豆-小粒 (大) 920G","spec":"920G/罐","unit":"罐","cat":"食材-乾貨"},{"code":"A077","name":"焦糖淋漿(酷來客)","spec":"500ML/罐","unit":"罐","cat":"食材-乾貨"},{"code":"A078","name":"烏斯特醬油French's","spec":"295ML/罐","unit":"罐","cat":"食材-乾貨"},{"code":"A079","name":"鸚嘴豆","spec":"","unit":"斤","cat":"食材-乾貨"},{"code":"A080","name":"小磨坊俄力岡葉","spec":"250G/包","unit":"包","cat":"食材-乾貨"},{"code":"A081","name":"酸黃瓜(SO)","spec":"1400G/罐","unit":"罐","cat":"食材-乾貨"},{"code":"A082","name":"科克蘭澳洲蜂蜜","spec":"2KG/瓶","unit":"瓶","cat":"食材-乾貨"},{"code":"B001","name":"摩佐拉乾酪2.72KG","spec":"2.72KG/條","unit":"條","cat":"食材-冷藏"},{"code":"B002","name":"摩佐羅拉切片乾酪","spec":"1KG/組(2包)","unit":"組","cat":"食材-冷藏"},{"code":"B003","name":"丹麥藍乾酪100G","spec":"100G/盒","unit":"盒","cat":"食材-冷藏"},{"code":"B004","name":"寶宏頂級起司絲","spec":"1KG/包","unit":"包","cat":"食材-冷藏"},{"code":"B005","name":"寶宏帕米桑起司絲","spec":"500G/包","unit":"包","cat":"食材-冷藏"},{"code":"B006","name":"寶宏250不熔乾酪丁","spec":"500G/包","unit":"包","cat":"食材-冷藏"},{"code":"B007","name":"邱拉爾臘腸切片(辣)-艾波索","spec":"500G/包","unit":"包","cat":"食材-冷藏"},{"code":"B008","name":"冷凍豬肉香腸片1KG","spec":"1KG/包","unit":"包","cat":"食材-冷藏"},{"code":"B009","name":"富統台灣豬培根","spec":"2KG/組(2包)","unit":"組","cat":"食材-冷藏"},{"code":"B010","name":"富統台灣豬火腿","spec":"1KG/組(2包)","unit":"組","cat":"食材-冷藏"},{"code":"B011","name":"台豬高津德式香腸","spec":"1.2KG/組(2包)","unit":"組","cat":"食材-冷藏"},{"code":"B012","name":"燻鮭魚碎肉","spec":"1KG/包","unit":"KG","cat":"食材-冷藏"},{"code":"B013","name":"德國香腸泥（小歐洲）","spec":"KG/包","unit":"包","cat":"食材-冷藏"},{"code":"B014","name":"豬絞肉","spec":"斤","unit":"斤","cat":"食材-冷藏"},{"code":"B015","name":"BEAUFOR法式芥末","spec":"200G/罐","unit":"罐","cat":"食材-冷藏"},{"code":"B016","name":"新鮮酵母/454G","spec":"454G/包","unit":"包","cat":"食材-冷藏"},{"code":"B017","name":"蔓越莓綜合果汁","spec":"1L/瓶","unit":"瓶","cat":"食材-冷藏"},{"code":"B018","name":"藍莓醬500G","spec":"500G/罐","unit":"罐","cat":"食材-冷藏"},{"code":"B019","name":"鮮奶油","spec":"L/瓶","unit":"瓶","cat":"食材-冷藏"},{"code":"B020","name":"澳洲豬義式火腿","spec":"250G/包","unit":"包","cat":"食材-冷藏"},{"code":"B021","name":"火腿索蘭諾(切片)-艾波索","spec":"100G/包","unit":"包","cat":"食材-冷藏"},{"code":"B022","name":"酸奶 24%（德國）","spec":"1L/罐","unit":"罐","cat":"食材-冷藏"},{"code":"B023","name":"布拉塔起司","spec":"200G/盒","unit":"盒","cat":"食材-冷藏"},{"code":"B024","name":"哈羅米乾酪","spec":"500G/組(2塊)","unit":"組","cat":"食材-冷藏"},{"code":"B025","name":"費塔乾酪","spec":"680/罐","unit":"罐","cat":"食材-冷藏"},{"code":"B026","name":"KS帕達諾乾酪","spec":"包","unit":"包","cat":"食材-冷藏"},{"code":"B027","name":"丹麥Smilla莫札里拉乾酪塊","spec":"2.3KG/條","unit":"條","cat":"食材-冷藏"},{"code":"B028","name":"奶油乳酪(2K)-菲力","spec":"2KG/條","unit":"條","cat":"食材-冷藏"},{"code":"B029","name":"硬質帕達諾乳酪500G","spec":"500G/包","unit":"包","cat":"食材-冷藏"},{"code":"B030","name":"瑪斯卡邦乳酪","spec":"500G/包","unit":"包","cat":"食材-冷藏"},{"code":"B031","name":"冷凍切片酪梨","spec":"KG/包","unit":"包","cat":"食材-冷藏"},{"code":"B032","name":"Blu長棍","spec":"","unit":"袋","cat":"食材-冷藏"},{"code":"B033","name":"少女法酥","spec":"","unit":"個","cat":"食材-冷藏"},{"code":"B034","name":"好運法酥","spec":"","unit":"個","cat":"食材-冷藏"},{"code":"B035","name":"原味優格3.5%-安博格","spec":"1L/罐","unit":"罐","cat":"食材-冷藏"},{"code":"B036","name":"燻鮭魚（切片）","spec":"KG","unit":"KG","cat":"食材-冷藏"},{"code":"B037","name":"燻乾酪（原味）-安博格","spec":"200G/條","unit":"條","cat":"食材-冷藏"},{"code":"B038","name":"安加無鹽奶油","spec":"454G/盒","unit":"盒","cat":"食材-冷藏"},{"code":"B039","name":"豬腱肉","spec":"斤","unit":"斤","cat":"食材-冷藏"},{"code":"B040","name":"豬梅花","spec":"斤","unit":"斤","cat":"食材-冷藏"},{"code":"B041","name":"立基起酥片(14*14)","spec":"20片/包","unit":"包","cat":"食材-冷藏"},{"code":"B042","name":"洗選蛋","spec":"10顆/盒","unit":"顆","cat":"食材-冷藏"},{"code":"B043","name":"西西里頂級開心果醬","spec":"","unit":"罐","cat":"食材-冷藏"},{"code":"B044","name":"鮮奶","spec":"936ML/罐","unit":"罐","cat":"食材-冷藏"},{"code":"B045","name":"酪梨丁Alejandrine","spec":"500G/包","unit":"包","cat":"食材-冷藏"},{"code":"B046","name":"美國冷凍藍莓","spec":"1.5KG包","unit":"包","cat":"食材-冷藏"},{"code":"B047","name":"布拉塔-米你50G*5顆","spec":"250G/盒","unit":"盒","cat":"食材-冷藏"},{"code":"B048","name":"冷凍野生小花枝","spec":"KG/包","unit":"包","cat":"食材-冷藏"},{"code":"B049","name":"KS養殖中熟蝦仁","spec":"908G/包","unit":"包","cat":"食材-冷藏"},{"code":"B050","name":"蛤蠣","spec":"150G/包","unit":"包","cat":"食材-冷藏"},{"code":"B051","name":"KS帶尾特大生蝦仁","spec":"908G/包","unit":"包","cat":"食材-冷藏"},{"code":"C001","name":"澳洲白玉馬鈴薯","spec":"2.2KG/包","unit":"KG","cat":"食材-生鮮蔬果"},{"code":"C002","name":"產銷履歷彩色甜椒","spec":"KG","unit":"KG","cat":"食材-生鮮蔬果"},{"code":"C003","name":"中香菇","spec":"KG","unit":"KG","cat":"食材-生鮮蔬果"},{"code":"C004","name":"大辣椒","spec":"KG","unit":"KG","cat":"食材-生鮮蔬果"},{"code":"C005","name":"青辣椒","spec":"KG","unit":"KG","cat":"食材-生鮮蔬果"},{"code":"C006","name":"美國洋蔥3.2KG","spec":"3.2KG/袋","unit":"KG","cat":"食材-生鮮蔬果"},{"code":"C007","name":"紅洋蔥","spec":"KG","unit":"KG","cat":"食材-生鮮蔬果"},{"code":"C008","name":"蒜仁","spec":"KG","unit":"KG","cat":"食材-生鮮蔬果"},{"code":"C009","name":"聖女小番茄","spec":"KG","unit":"KG","cat":"食材-生鮮蔬果"},{"code":"C010","name":"蘿勒葉","spec":"KG","unit":"KG","cat":"食材-生鮮蔬果"},{"code":"C011","name":"菠菜","spec":"KG","unit":"KG","cat":"食材-生鮮蔬果"},{"code":"C012","name":"金針菇","spec":"200G/包","unit":"包","cat":"食材-生鮮蔬果"},{"code":"C013","name":"蒔蘿","spec":"KG","unit":"KG","cat":"食材-生鮮蔬果"},{"code":"C014","name":"芝麻葉","spec":"KG","unit":"KG","cat":"食材-生鮮蔬果"},{"code":"C015","name":"杏包菇","spec":"KG","unit":"KG","cat":"食材-生鮮蔬果"},{"code":"C016","name":"綜合生菜","spec":"350G/包","unit":"包","cat":"食材-生鮮蔬果"},{"code":"C017","name":"BABY LEAF","spec":"200G/包","unit":"包","cat":"食材-生鮮蔬果"},{"code":"C018","name":"美國蘿蔓心","spec":"1.2KG/袋","unit":"袋","cat":"食材-生鮮蔬果"},{"code":"C019","name":"平葉巴西里","spec":"KG","unit":"KG","cat":"食材-生鮮蔬果"},{"code":"C020","name":"彩椒","spec":"500G/盒","unit":"KG","cat":"食材-生鮮蔬果"},{"code":"C021","name":"履歷白洋菇500G","spec":"500G/包","unit":"包","cat":"食材-生鮮蔬果"},{"code":"C022","name":"美國馬鈴薯10LB","spec":"4.54KG/包","unit":"KG","cat":"食材-生鮮蔬果"},{"code":"C023","name":"美國洋蔥","spec":"粒","unit":"粒","cat":"食材-生鮮蔬果"},{"code":"C024","name":"車輪南瓜","spec":"KG","unit":"KG","cat":"食材-生鮮蔬果"},{"code":"C025","name":"履歷櫛瓜1公斤","spec":"KG","unit":"KG","cat":"食材-生鮮蔬果"},{"code":"C026","name":"朝天椒","spec":"KG","unit":"KG","cat":"食材-生鮮蔬果"},{"code":"C027","name":"蘋果","spec":"","unit":"KG","cat":"食材-生鮮蔬果"},{"code":"C028","name":"紫高麗菜苗","spec":"","unit":"盒","cat":"食材-生鮮蔬果"},{"code":"C029","name":"寶寶生菜","spec":"200G/盒","unit":"盒","cat":"食材-生鮮蔬果"},{"code":"C030","name":"沙拉番茄","spec":"600G/盒","unit":"KG","cat":"食材-生鮮蔬果"},{"code":"C031","name":"豌豆芽","spec":"100G/包","unit":"KG","cat":"食材-生鮮蔬果"},{"code":"C032","name":"紫甘藍","spec":"","unit":"KG","cat":"食材-生鮮蔬果"},{"code":"C033","name":"綜合蔬菜盒-活舒菜","spec":"180G/盒","unit":"盒","cat":"食材-生鮮蔬果"},{"code":"C034","name":"美國萵苣生菜2CT","spec":"","unit":"KG","cat":"食材-生鮮蔬果"},{"code":"C035","name":"美國黃皮馬鈴薯","spec":"2.2KG/包","unit":"KG","cat":"食材-生鮮蔬果"},{"code":"D001","name":"黑松沙士330ML","spec":"6罐/手","unit":"罐","cat":"飲料"},{"code":"D002","name":"可樂330ML","spec":"32罐/箱","unit":"罐","cat":"飲料"},{"code":"D003","name":"雪碧汽水330ML","spec":"32罐/箱","unit":"罐","cat":"飲料"},{"code":"D004","name":"金牌台啤330ML","spec":"6罐/手","unit":"罐","cat":"飲料"},{"code":"D005","name":"麥根沙士330ML","spec":"6罐/手","unit":"罐","cat":"飲料"},{"code":"D006","name":"維大力加鹽沙士330ML","spec":"6罐/手","unit":"罐","cat":"飲料"},{"code":"D007","name":"波爾茶葡萄柚320ML","spec":"6罐/手","unit":"罐","cat":"飲料"},{"code":"D008","name":"可口可樂ZERO 330ML","spec":"32罐/箱","unit":"罐","cat":"飲料"},{"code":"D009","name":"無糖雪碧330ML","spec":"6罐/手","unit":"罐","cat":"飲料"},{"code":"D010","name":"芬達橘子330ML","spec":"6罐/手","unit":"罐","cat":"飲料"},{"code":"D011","name":"維他露P330ML","spec":"6罐/手","unit":"罐","cat":"飲料"},{"code":"D012","name":"CC檸檬CAN 330ML","spec":"6罐/手","unit":"罐","cat":"飲料"},{"code":"D013","name":"CC氣泡飲蘋果330ML","spec":"6罐/手","unit":"罐","cat":"飲料"},{"code":"D014","name":"維大力蘋果風味汽水330ML","spec":"6罐/手","unit":"罐","cat":"飲料"},{"code":"D015","name":"泰山仙草蜜CAN 330","spec":"6罐/手","unit":"罐","cat":"飲料"},{"code":"D016","name":"舒跑(中)CAN 335ML","spec":"6罐/手","unit":"罐","cat":"飲料"},{"code":"D017","name":"健酪原味乳酸飲料330ML","spec":"6罐/手","unit":"罐","cat":"飲料"},{"code":"D018","name":"可爾必思330ML","spec":"6罐/手","unit":"瓶","cat":"飲料"},{"code":"D019","name":"微舒打葡萄330ML","spec":"6罐/手","unit":"罐","cat":"飲料"},{"code":"D020","name":"百事可樂330ML","spec":"6罐/手","unit":"罐","cat":"飲料"},{"code":"D021","name":"七喜汽水330ML","spec":"6罐/手","unit":"罐","cat":"飲料"},{"code":"D022","name":"蘋果西打330ML","spec":"6罐/手","unit":"罐","cat":"飲料"},{"code":"D023","name":"御茶園綠茶335ML","spec":"24罐/箱","unit":"罐","cat":"飲料"},{"code":"D024","name":"悅氏礦泉水600ML","spec":"6瓶/手","unit":"瓶","cat":"飲料"},{"code":"D025","name":"波爾天然水","spec":"6罐/手","unit":"罐","cat":"飲料"},{"code":"D026","name":"寶嘉麗氣泡水","spec":"6罐/手","unit":"瓶","cat":"飲料"},{"code":"D027","name":"黑松沙士2L","spec":"2L/瓶","unit":"瓶","cat":"飲料"},{"code":"D028","name":"可口可樂2L","spec":"2L/瓶","unit":"瓶","cat":"飲料"},{"code":"D029","name":"雪碧汽水2L","spec":"2L/瓶","unit":"瓶","cat":"飲料"},{"code":"D030","name":"芬達橘子2L","spec":"2L/瓶","unit":"瓶","cat":"飲料"},{"code":"D031","name":"可口可樂ZERO 2L","spec":"2L/瓶","unit":"瓶","cat":"飲料"},{"code":"D032","name":"黑松汽水2L","spec":"2L/瓶","unit":"瓶","cat":"飲料"},{"code":"D033","name":"麥根沙士2L","spec":"2L/瓶","unit":"瓶","cat":"飲料"},{"code":"D034","name":"維他露P2L","spec":"2L/瓶","unit":"瓶","cat":"飲料"},{"code":"D035","name":"維大力白葡萄汽水2L","spec":"2L/瓶","unit":"瓶","cat":"飲料"},{"code":"D036","name":"維大力經典風味汽水2L","spec":"2L/瓶","unit":"瓶","cat":"飲料"},{"code":"D037","name":"維大力蘋果汽水2L","spec":"2L/瓶","unit":"瓶","cat":"飲料"},{"code":"D038","name":"悅氏麥仔茶2L","spec":"2L/瓶","unit":"瓶","cat":"飲料"},{"code":"D039","name":"百事可樂2L","spec":"2L/瓶","unit":"瓶","cat":"飲料"},{"code":"D040","name":"七喜汽水2L","spec":"2L/瓶","unit":"瓶","cat":"飲料"},{"code":"D041","name":"維大力白葡萄汽水330ML","spec":"6罐/手","unit":"罐","cat":"飲料"},{"code":"D042","name":"維大力零熱量汽水330ML","spec":"6罐/手","unit":"罐","cat":"飲料"},{"code":"D043","name":"維大力汽水330ML","spec":"6罐/手","unit":"罐","cat":"飲料"},{"code":"D044","name":"蘋果汁320ML","spec":"24罐/箱","unit":"罐","cat":"飲料"},{"code":"D045","name":"黑松加鹽沙士330ML","spec":"24罐/箱","unit":"罐","cat":"飲料"},{"code":"D046","name":"RICO檸檬紅茶340ML","spec":"24罐/箱","unit":"罐","cat":"飲料"},{"code":"D047","name":"RICO麥仔茶340ML","spec":"24罐/箱","unit":"罐","cat":"飲料"},{"code":"D048","name":"RICO仙草蜜340ML","spec":"24罐/箱","unit":"罐","cat":"飲料"},{"code":"D049","name":"舒味思萊姆氣泡水330ML","spec":"24罐/箱","unit":"罐","cat":"飲料"},{"code":"D050","name":"激浪汽水330ML","spec":"24罐/箱","unit":"罐","cat":"飲料"},{"code":"G001","name":"5股麻繩","spec":"公斤","unit":"KG","cat":"包材"},{"code":"G002","name":"披薩紙盒","spec":"","unit":"個","cat":"包材"},{"code":"G003","name":"披薩盒貼紙","spec":"","unit":"個","cat":"包材"},{"code":"G004","name":"進口烤盤紙 30*30","spec":"1000張/包","unit":"包","cat":"包材"},{"code":"G005","name":"奶酪貼紙","spec":"","unit":"張","cat":"包材"},{"code":"G006","name":"奶酪杯","spec":"25個/包","unit":"個","cat":"包材"},{"code":"G007","name":"奶酪杯蓋","spec":"25個/包","unit":"個","cat":"包材"},{"code":"G008","name":"670/45鋁箔盒","spec":"125個/條","unit":"個","cat":"包材"},{"code":"G009","name":"670/45鋁箔蓋","spec":"500個/條","unit":"個","cat":"包材"},{"code":"G010","name":"260紙湯杯","spec":"50個/條","unit":"個","cat":"包材"},{"code":"G011","name":"PP湯杯蓋2632","spec":"","unit":"個","cat":"包材"},{"code":"G012","name":"520紙湯杯","spec":"","unit":"個","cat":"包材"},{"code":"G013","name":"PP湯杯蓋520","spec":"","unit":"個","cat":"包材"},{"code":"G014","name":"真空袋25*26","spec":"100入/包","unit":"包","cat":"包材"},{"code":"G015","name":"真空袋25*32","spec":"100入/包","unit":"包","cat":"包材"},{"code":"G016","name":"真空袋26*35","spec":"100入/包","unit":"包","cat":"包材"},{"code":"G017","name":"220牛皮紙袋(大)","spec":"50入/疊","unit":"個","cat":"包材"},{"code":"G018","name":"8260牛皮紙袋(小)","spec":"50入/疊","unit":"個","cat":"包材"},{"code":"G019","name":"冷凍膠貼紙-千層麵","spec":"85*16mm","unit":"張","cat":"包材"},{"code":"G020","name":"冷凍膠貼紙-通心麵","spec":"85*16mm","unit":"張","cat":"包材"},{"code":"G021","name":"冷凍貼紙-窯烤麵包","spec":"500張","unit":"張","cat":"包材"},{"code":"G022","name":"冷凍披薩正面貼-瑪格麗特","spec":"","unit":"張","cat":"包材"},{"code":"G023","name":"冷凍披薩營養標籤-瑪格麗特","spec":"","unit":"張","cat":"包材"},{"code":"G024","name":"冷凍披薩正面貼-義式香腸","spec":"","unit":"張","cat":"包材"},{"code":"G025","name":"冷凍披薩營養標籤-義式香腸","spec":"","unit":"張","cat":"包材"},{"code":"G026","name":"冷凍披薩正面貼-超級馬力歐","spec":"","unit":"張","cat":"包材"},{"code":"G027","name":"冷凍披薩營養標籤-超級馬力歐","spec":"","unit":"張","cat":"包材"},{"code":"G028","name":"冷凍披薩正面貼-夏威夷","spec":"","unit":"張","cat":"包材"},{"code":"G029","name":"冷凍披薩營養標籤-夏威夷","spec":"","unit":"張","cat":"包材"},{"code":"G030","name":"冷凍披薩正面貼-Hot到你家","spec":"","unit":"張","cat":"包材"},{"code":"G031","name":"冷凍披薩營養標籤-Hot到你家","spec":"","unit":"張","cat":"包材"},{"code":"G032","name":"冷凍披薩正面貼-起司","spec":"","unit":"張","cat":"包材"},{"code":"G033","name":"冷凍披薩營養標籤-起司","spec":"","unit":"張","cat":"包材"},{"code":"G034","name":"7-ELEVN冷凍紙箱S60","spec":"","unit":"個","cat":"包材"},{"code":"G035","name":"7-ELEVN冷凍紙箱S80","spec":"","unit":"個","cat":"包材"},{"code":"G036","name":"7-ELEVN冷凍紙箱S90","spec":"","unit":"個","cat":"包材"},{"code":"G037","name":"全家冷凍紙箱S60","spec":"","unit":"個","cat":"包材"},{"code":"G038","name":"全家冷凍紙箱S90","spec":"","unit":"個","cat":"包材"},{"code":"G039","name":"全家冷凍紙箱S105","spec":"","unit":"個","cat":"包材"},{"code":"G040","name":"冷凍披薩包裝盒(六入）","spec":"","unit":"個","cat":"包材"},{"code":"G041","name":"紙餐盒700ML","spec":"","unit":"個","cat":"包材"},{"code":"G042","name":"紙餐盒700ML 蓋","spec":"","unit":"個","cat":"包材"},{"code":"G043","name":"2oz連體醬料碟","spec":"","unit":"個","cat":"包材"},{"code":"G044","name":"480/35鋁箔盒","spec":"","unit":"個","cat":"包材"},{"code":"G045","name":"480/35鋁箔蓋","spec":"","unit":"個","cat":"包材"},{"code":"J001","name":"KS保鮮膜2入","spec":"2個/組","unit":"組","cat":"耗材"},{"code":"J002","name":"KS進口保鮮膜","spec":"","unit":"個","cat":"耗材"},{"code":"J003","name":"排水口濾網","spec":"200入/袋","unit":"袋","cat":"耗材"},{"code":"J004","name":"20K瓦斯","spec":"20K/支","unit":"支","cat":"耗材"},{"code":"J005","name":"9*9百合-白","spec":"36包/箱","unit":"包","cat":"耗材"},{"code":"J006","name":"生活家垃圾袋(大)","spec":"3捲/包","unit":"捲","cat":"耗材"},{"code":"J007","name":"北市專用垃圾袋14L","spec":"20個/包","unit":"個","cat":"耗材"},{"code":"J008","name":"北市專用垃圾袋25L","spec":"20個/包","unit":"個","cat":"耗材"},{"code":"J009","name":"唯潔雅100抽12包","spec":"12包/袋","unit":"包","cat":"耗材"},{"code":"J010","name":"擦手紙","spec":"5包/袋","unit":"包","cat":"耗材"},{"code":"J011","name":"發票紙捲","spec":"21捲/箱","unit":"捲","cat":"耗材"},{"code":"J012","name":"不鏽鋼替換鋼絲","spec":"5入/包","unit":"包","cat":"耗材"},{"code":"J013","name":"KS鋁箔紙","spec":"","unit":"捲","cat":"耗材"},{"code":"J014","name":"205紙杯7oz","spec":"","unit":"個","cat":"耗材"},{"code":"J015","name":"0號夾鏈袋","spec":"100個/包","unit":"包","cat":"耗材"},{"code":"J016","name":"2號夾鏈袋","spec":"100個/包","unit":"包","cat":"耗材"},{"code":"J017","name":"3號夾鏈袋","spec":"100個/包","unit":"包","cat":"耗材"},{"code":"J018","name":"4號夾鏈袋","spec":"100個/包","unit":"包","cat":"耗材"},{"code":"J019","name":"6號夾鏈袋","spec":"100個/包","unit":"包","cat":"耗材"},{"code":"J020","name":"7號夾鏈袋","spec":"100個/包","unit":"包","cat":"耗材"},{"code":"J021","name":"8號夾鏈袋","spec":"100個/包","unit":"包","cat":"耗材"},{"code":"J022","name":"10號夾鏈袋","spec":"100個/包","unit":"包","cat":"耗材"},{"code":"J023","name":"12號夾鏈袋","spec":"100個/包","unit":"包","cat":"耗材"},{"code":"J024","name":"四兩袋","spec":"375G/包","unit":"包","cat":"耗材"},{"code":"J025","name":"六兩袋","spec":"338G/包","unit":"包","cat":"耗材"},{"code":"J026","name":"耐熱袋-半斤袋","spec":"200G/包","unit":"包","cat":"耗材"},{"code":"J027","name":"耐熱袋-一斤袋","spec":"","unit":"包","cat":"耗材"},{"code":"J028","name":"五斤袋","spec":"62個/包","unit":"包","cat":"耗材"},{"code":"J029","name":"半斤提袋","spec":"260G/包","unit":"包","cat":"耗材"},{"code":"J030","name":"一斤提袋","spec":"260G/包","unit":"包","cat":"耗材"},{"code":"J031","name":"防油紙袋102--8兩","spec":"100個/包","unit":"個","cat":"耗材"},{"code":"J032","name":"酒精75%","spec":"","unit":"L","cat":"耗材"},{"code":"J033","name":"洗碗精","spec":"3.5KG/瓶","unit":"KG","cat":"耗材"},{"code":"J034","name":"地板清潔液","spec":"1.8KG/包","unit":"KG","cat":"耗材"},{"code":"J035","name":"漂白水","spec":"","unit":"L","cat":"耗材"},{"code":"J036","name":"科技海綿","spec":"","unit":"個","cat":"耗材"},{"code":"J037","name":"菜瓜布","spec":"","unit":"個","cat":"耗材"},{"code":"J038","name":"白色長抹布","spec":"","unit":"條","cat":"耗材"},{"code":"J039","name":"藍色抹布","spec":"","unit":"條","cat":"耗材"},{"code":"J040","name":"拖把盤","spec":"","unit":"個","cat":"耗材"},{"code":"J041","name":"3號電池","spec":"","unit":"個","cat":"耗材"},{"code":"J042","name":"4號電池","spec":"","unit":"個","cat":"耗材"},{"code":"J043","name":"水銀電池","spec":"","unit":"個","cat":"耗材"},{"code":"J044","name":"布手套(白)","spec":"","unit":"雙","cat":"耗材"},{"code":"J045","name":"布手套(灰)","spec":"","unit":"雙","cat":"耗材"},{"code":"J046","name":"冷凍回饋卡","spec":"","unit":"張","cat":"耗材"},{"code":"J047","name":"客用鐵叉子","spec":"","unit":"個","cat":"耗材"},{"code":"J048","name":"客用鐵湯匙","spec":"","unit":"個","cat":"耗材"},{"code":"J049","name":"15*15客用木盤","spec":"","unit":"個","cat":"耗材"},{"code":"J050","name":"25*15客用木盤","spec":"","unit":"個","cat":"耗材"},{"code":"J051","name":"內用披薩板","spec":"","unit":"個","cat":"耗材"},{"code":"J052","name":"小茶匙","spec":"","unit":"個","cat":"耗材"},{"code":"J053","name":"不鏽鋼保鮮盒(小)含蓋","spec":"","unit":"個","cat":"耗材"},{"code":"J054","name":"奶酪小湯匙","spec":"20個/包","unit":"包","cat":"耗材"},{"code":"J055","name":"塑膠手套","spec":"2個/副","unit":"副","cat":"耗材"},{"code":"J056","name":"冷凍千層麵貼紙(舊)","spec":"","unit":"張","cat":"耗材"},{"code":"J057","name":"冷凍通心麵貼紙(舊)","spec":"","unit":"張","cat":"耗材"},{"code":"J058","name":"立體平口袋17*32cm","spec":"100個/包","unit":"包","cat":"耗材"},{"code":"J059","name":"立體平口袋10*18cm","spec":"100個/包","unit":"包","cat":"耗材"},{"code":"J060","name":"漢堡透明塑膠盒","spec":"","unit":"個","cat":"耗材"},{"code":"J061","name":"鋁箔圓底碗（小）","spec":"6個/組","unit":"組","cat":"耗材"},{"code":"J062","name":"大垃圾袋（黑）","spec":"1KG/捲","unit":"捲","cat":"耗材"},{"code":"J063","name":"平面口罩","spec":"50個/盒","unit":"盒","cat":"耗材"},{"code":"J064","name":"消臭液","spec":"","unit":"瓶","cat":"耗材"},{"code":"J065","name":"膠帶(大)","spec":"","unit":"捲","cat":"耗材"},{"code":"J066","name":"膠帶(小)","spec":"","unit":"捲","cat":"耗材"},{"code":"J067","name":"集點卡","spec":"","unit":"張","cat":"耗材"},{"code":"J068","name":"打碼機墨水","spec":"","unit":"瓶","cat":"耗材"},{"code":"J069","name":"打碼機墨墊","spec":"","unit":"個","cat":"耗材"},{"code":"J070","name":"折疊探針式食品溫度計","spec":"","unit":"個","cat":"耗材"},{"code":"J071","name":"奇異筆 黑色 NO605","spec":"","unit":"支","cat":"耗材"},{"code":"F001","name":"奶酪","spec":"","unit":"個","cat":"成品"},{"code":"F002","name":"巴斯克","spec":"","unit":"個","cat":"成品"},{"code":"F003","name":"綜合莓果醬","spec":"400ML/瓶","unit":"瓶","cat":"成品"},{"code":"F004","name":"千層麵","spec":"","unit":"個","cat":"成品"},{"code":"F005","name":"通心麵","spec":"","unit":"個","cat":"成品"},{"code":"F006","name":"麵包","spec":"220G/包","unit":"包","cat":"成品"},{"code":"F007","name":"瑪格麗特","spec":"","unit":"","cat":"成品"},{"code":"F008","name":"素食披薩","spec":"","unit":"","cat":"成品"},{"code":"F009","name":"Hot到您家披薩","spec":"","unit":"","cat":"成品"},{"code":"F010","name":"蔡弟披薩","spec":"","unit":"","cat":"成品"},{"code":"F011","name":"地中海披薩","spec":"","unit":"","cat":"成品"},{"code":"F012","name":"阿根廷探戈","spec":"","unit":"","cat":"成品"},{"code":"F013","name":"饌義德披薩","spec":"","unit":"","cat":"成品"},{"code":"F014","name":"夏威夷披薩","spec":"","unit":"","cat":"成品"},{"code":"F015","name":"超級馬力歐披薩","spec":"","unit":"","cat":"成品"},{"code":"F016","name":"西班牙辣味香腸披薩","spec":"","unit":"","cat":"成品"},{"code":"F017","name":"義式香腸披薩","spec":"","unit":"","cat":"成品"},{"code":"F018","name":"法蘭克福香腸披薩","spec":"","unit":"","cat":"成品"},{"code":"F019","name":"鯷魚披薩","spec":"","unit":"","cat":"成品"},{"code":"F020","name":"鮭魚披薩","spec":"","unit":"","cat":"成品"},{"code":"F021","name":"OREO甜披薩","spec":"","unit":"","cat":"成品"},{"code":"F022","name":"菇菇濃湯","spec":"","unit":"","cat":"成品"},{"code":"F023","name":"聖誕節披薩","spec":"","unit":"","cat":"成品"},{"code":"F024","name":"沙丁魚","spec":"","unit":"","cat":"成品"},{"code":"F025","name":"墨西哥","spec":"","unit":"","cat":"成品"},{"code":"F026","name":"飲料","spec":"","unit":"","cat":"成品"},{"code":"F027","name":"起司披薩","spec":"","unit":"","cat":"成品"},{"code":"F028","name":"NUTELLA","spec":"","unit":"","cat":"成品"},{"code":"F029","name":"鮪魚披薩","spec":"","unit":"","cat":"成品"},{"code":"F030","name":"拿坡里麵糰","spec":"","unit":"","cat":"成品"},{"code":"F031","name":"羅馬式麵糰","spec":"","unit":"","cat":"成品"},{"code":"F032","name":"季節沙拉","spec":"","unit":"","cat":"成品"},{"code":"F033","name":"豬肉丸","spec":"","unit":"","cat":"成品"},{"code":"F034","name":"綜合海鮮","spec":"","unit":"","cat":"成品"},{"code":"F035","name":"姑姑濃湯材料","spec":"","unit":"","cat":"成品"},{"code":"P001","name":"冷凍瑪格莉特披薩","spec":"7吋 冷凍","unit":"包","cat":"冷凍披薩"},{"code":"P002","name":"冷凍義式香腸披薩","spec":"7吋 冷凍","unit":"包","cat":"冷凍披薩"},{"code":"P003","name":"冷凍超級馬力歐披薩","spec":"7吋 冷凍","unit":"包","cat":"冷凍披薩"},{"code":"P004","name":"冷凍起司披薩","spec":"7吋 冷凍","unit":"包","cat":"冷凍披薩"},{"code":"P005","name":"冷凍夏威夷披薩","spec":"7吋 冷凍","unit":"包","cat":"冷凍披薩"},{"code":"P006","name":"冷凍Hot到你家披薩","spec":"7吋 冷凍","unit":"包","cat":"冷凍披薩"},{"code":"M001","name":"冷凍千層麵","spec":"370G","unit":"包","cat":"冷凍成品"},{"code":"M002","name":"冷凍千層麵(小)","spec":"280G","unit":"包","cat":"冷凍成品"},{"code":"M003","name":"冷凍通心麵","spec":"380G","unit":"包","cat":"冷凍成品"},{"code":"M004","name":"冷凍窯烤麵包","spec":"220G","unit":"包","cat":"冷凍成品"},{"code":"Q001","name":"兒童最愛組","spec":"義*3、夏*3、起*3","unit":"組","cat":"組合商品"},{"code":"Q002","name":"家庭陪伴餐","spec":"義*4、瑪*4、馬*4","unit":"組","cat":"組合商品"},{"code":"Q003","name":"聚餐歡樂組","spec":"六種*2","unit":"組","cat":"組合商品"},{"code":"T11","name":"運費-冷凍7-ELEVEN","spec":"","unit":"包","cat":"運費"},{"code":"T12","name":"運費-冷凍7-ELEVEN到宅","spec":"","unit":"包","cat":"運費"},{"code":"T21","name":"運費-冷凍全家","spec":"","unit":"包","cat":"運費"},{"code":"T31","name":"運費-冷凍黑貓(60)","spec":"","unit":"","cat":"運費"},{"code":"T32","name":"運費-冷凍黑貓(90)","spec":"","unit":"","cat":"運費"},{"code":"T33","name":"運費-冷凍黑貓(105)","spec":"","unit":"","cat":"運費"}];
+
+// ============ STATE ============
+let records = JSON.parse(localStorage.getItem('pv_records') || '[]');
+let selectedItem = null;
+let currentStore = 1;
+let currentTax = 0;
+let searchTimeout = null;
+
+// ============ INIT ============
+const today = new Date();
+document.getElementById('entryDate').value = today.toISOString().split('T')[0];
+updateHeaderCount();
+renderRecords();
+updateStats();
+
+// Listen for price/qty changes to update preview
+document.getElementById('qty').addEventListener('input', updatePreview);
+document.getElementById('price').addEventListener('input', updatePreview);
+
+// ============ TABS ============
+function switchTab(tab) {
+  document.querySelectorAll('.tab').forEach((t, i) => {
+    t.classList.toggle('active', ['input','records','export'][i] === tab);
+  });
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.getElementById('panel-' + tab).classList.add('active');
+  if (tab === 'records') renderRecords();
+  if (tab === 'export') updateStats();
+}
+
+// ============ STORE ============
+function setStore(n) {
+  currentStore = n;
+  document.getElementById('storeBtn1').classList.toggle('active', n === 1);
+  document.getElementById('storeBtn2').classList.toggle('active', n === 2);
+}
+
+// ============ TAX ============
+function setTax(v) {
+  currentTax = v;
+  document.getElementById('taxBtn0').classList.toggle('active', v === 0);
+  document.getElementById('taxBtn005').classList.toggle('active', v === 0.05);
+  document.getElementById('taxBtn5').classList.toggle('active', v === 5);
+  updatePreview();
+}
+
+// ============ DATE ============
+function setDateToday() { document.getElementById('entryDate').value = fmtDate(new Date()); }
+function setDateYesterday() { const d = new Date(); d.setDate(d.getDate()-1); document.getElementById('entryDate').value = fmtDate(d); }
+function setDate2DaysAgo() { const d = new Date(); d.setDate(d.getDate()-2); document.getElementById('entryDate').value = fmtDate(d); }
+function fmtDate(d) { return d.toISOString().split('T')[0]; }
+
+// ============ SEARCH ============
+function onSearch() {
+  clearTimeout(searchTimeout);
+  searchTimeout = setTimeout(doSearch, 150);
+}
+
+function doSearch() {
+  const q = document.getElementById('searchInput').value.trim().toLowerCase();
+  const resultsEl = document.getElementById('searchResults');
+  if (!q || q.length < 1) { resultsEl.style.display = 'none'; return; }
+  const matches = ITEMS.filter(i =>
+    i.name.toLowerCase().includes(q) ||
+    i.code.toLowerCase().includes(q) ||
+    i.cat.toLowerCase().includes(q)
+  ).slice(0, 12);
+  if (!matches.length) { resultsEl.style.display = 'none'; return; }
+  resultsEl.innerHTML = matches.map(i => `
+    <div class="search-result-item" onclick="selectItem('${i.code}')">
+      <div class="sri-name">${i.name}</div>
+      <div class="sri-meta"><span class="sri-code">${i.code}</span> · ${i.cat} · ${i.spec || '—'} · 單位: ${i.unit || '—'}</div>
+    </div>
+  `).join('');
+  resultsEl.style.display = 'block';
+}
+
+function selectItem(code) {
+  selectedItem = ITEMS.find(i => i.code === code);
+  if (!selectedItem) return;
+  document.getElementById('searchInput').value = selectedItem.name;
+  document.getElementById('searchResults').style.display = 'none';
+  document.getElementById('sbCode').textContent = selectedItem.code;
+  document.getElementById('sbName').textContent = selectedItem.name;
+  document.getElementById('sbSpec').textContent = (selectedItem.spec || '—') + '  ·  單位: ' + (selectedItem.unit || '—');
+  document.getElementById('selectedBadge').classList.add('visible');
+  document.getElementById('miscCheck').checked = false;
+  document.getElementById('miscSection').style.display = 'none';
+}
+
+function clearSelected() {
+  selectedItem = null;
+  document.getElementById('searchInput').value = '';
+  document.getElementById('selectedBadge').classList.remove('visible');
+}
+
+// ============ MISC ============
+function toggleMisc() {
+  const on = document.getElementById('miscCheck').checked;
+  document.getElementById('miscSection').style.display = on ? 'block' : 'none';
+  if (on) { clearSelected(); document.getElementById('searchInput').value = ''; }
+}
+
+// ============ PREVIEW ============
+function updatePreview() {
+  const qty = parseFloat(document.getElementById('qty').value) || 0;
+  const price = parseFloat(document.getElementById('price').value) || 0;
+  const subtotal = Math.round(qty * price);
+  const taxRate = currentTax === 5 ? 0 : currentTax;
+  const total = Math.round(subtotal * (1 + taxRate));
+  document.getElementById('totalPreview').textContent = total > 0 ? '$' + total.toLocaleString() : '—';
+}
+
+// ============ SAVE ============
+function saveEntry() {
+  const isMisc = document.getElementById('miscCheck').checked;
+  const date = document.getElementById('entryDate').value;
+  const qty = parseFloat(document.getElementById('qty').value);
+  const price = parseFloat(document.getElementById('price').value);
+  const vendor = document.getElementById('vendor').value.trim();
+  const invoice = document.getElementById('invoice').value.trim().toUpperCase();
+
+  if (!date) { showToast('❌ 請選擇日期', true); return; }
+  if (isNaN(qty) || qty <= 0) { showToast('❌ 請輸入數量', true); return; }
+  if (isNaN(price) || price < 0) { showToast('❌ 請輸入單價', true); return; }
+
+  let code = '', name = '', spec = '', unit = '', cat = '';
+
+  if (isMisc) {
+    const miscName = document.getElementById('miscName').value.trim();
+    cat = document.getElementById('miscCat').value;
+    name = miscName || cat;
+    if (!name) { showToast('❌ 請輸入品項描述', true); return; }
+  } else {
+    if (!selectedItem) { showToast('❌ 請搜尋並選擇品項', true); return; }
+    code = selectedItem.code;
+    name = selectedItem.name;
+    spec = selectedItem.spec;
+    unit = selectedItem.unit;
+    cat = '1、食材成本';
+    if (['包材','耗材'].includes(selectedItem.cat)) cat = '2.3、物料消耗';
+    if (selectedItem.cat === '飲料') cat = '1、食材成本';
+  }
+
+  const subtotal = Math.round(qty * price);
+  const taxRate = currentTax === 5 ? 0 : currentTax;
+  const total = Math.round(subtotal * (1 + taxRate));
+  const taxVal = currentTax === 5 ? 5 : currentTax;
+
+  const record = {
+    id: Date.now(),
+    date, cat, code, name, spec, unit,
+    qty, price: Math.round(price * 100) / 100,
+    subtotal, total, tax: taxVal,
+    vendor, invoice,
+    store: currentStore
+  };
+
+  records.unshift(record);
+  saveRecords();
+  updateHeaderCount();
+  showToast('✅ 已儲存：' + name);
+
+  // Reset form (keep store, date, tax)
+  document.getElementById('qty').value = '';
+  document.getElementById('price').value = '';
+  document.getElementById('vendor').value = '';
+  document.getElementById('invoice').value = '';
+  document.getElementById('totalPreview').textContent = '—';
+  clearSelected();
+  document.getElementById('miscCheck').checked = false;
+  document.getElementById('miscSection').style.display = 'none';
+}
+
+// ============ RECORDS ============
+function renderRecords() {
+  const list = document.getElementById('recordsList');
+  document.getElementById('recordsCount').textContent = '共 ' + records.length + ' 筆';
+  if (!records.length) {
+    list.innerHTML = `<div class="empty-state"><div class="emoji">📋</div><p>還沒有記錄<br>去輸入頁面新增進貨吧！</p></div>`;
+    return;
+  }
+  list.innerHTML = records.map(r => `
+    <div class="record-item">
+      <div class="ri-top">
+        <div class="ri-name">${r.name}</div>
+        <div class="ri-amount">$${r.total.toLocaleString()}</div>
+      </div>
+      <div class="ri-meta">
+        <span class="ri-tag">${r.date}</span>
+        <span class="ri-tag ${r.store === 1 ? 'store1' : 'store2'}">${r.store === 1 ? '天母' : '昌吉'}</span>
+        ${r.code ? `<span class="ri-tag">${r.code}</span>` : ''}
+        <span class="ri-tag">${r.qty} ${r.unit || ''} × $${r.price}</span>
+        ${r.invoice ? `<span class="ri-tag">${r.invoice}</span>` : ''}
+        <span class="ri-tag" onclick="deleteRecord(${r.id})" style="cursor:pointer;color:#e05050;">🗑 刪除</span>
+      </div>
+    </div>
+  `).join('');
+}
+
+function deleteRecord(id) {
+  records = records.filter(r => r.id !== id);
+  saveRecords();
+  updateHeaderCount();
+  renderRecords();
+  showToast('已刪除');
+}
+
+function clearAllRecords() {
+  if (!confirm('確定要清空所有記錄嗎？這個動作無法還原。')) return;
+  records = [];
+  saveRecords();
+  updateHeaderCount();
+  renderRecords();
+  showToast('已清空');
+}
+
+// ============ EXPORT ============
+function buildCSV() {
+  const header = '日期/時間,類別,識別碼,品項,規格,單位,數量,單價（未稅）,價格（未稅）,價格（含稅）,備註,發票號碼/流水號,稅別,店';
+  const rows = [...records].reverse().map(r => {
+    const dateStr = r.date + ' 0:00';
+    const taxStr = r.tax === 0 ? '0' : (r.tax === 0.05 ? '0.05' : '0.05');
+    return [
+      dateStr, r.cat, r.code || '', r.name, r.spec || '', r.unit || '',
+      r.qty, r.price, r.subtotal, r.total,
+      r.vendor || '', r.invoice || '', taxStr, r.store
+    ].map(v => '"' + String(v).replace(/"/g, '""') + '"').join(',');
+  });
+  return header + '\n' + rows.join('\n');
+}
+
+function exportCSV() {
+  if (!records.length) { showToast('❌ 沒有記錄可匯出', true); return; }
+  const csv = '\uFEFF' + buildCSV(); // BOM for Excel
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  const month = records[0].date.slice(0, 7).replace('-', '');
+  a.href = url;
+  a.download = 'PapaVito_進貨_' + month + '.csv';
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast('✅ CSV 下載完成！');
+}
+
+function copyCSV() {
+  if (!records.length) { showToast('❌ 沒有記錄可匯出', true); return; }
+  navigator.clipboard.writeText(buildCSV()).then(() => showToast('✅ 已複製到剪貼板！'));
+}
+
+function updateStats() {
+  const el = document.getElementById('statsContent');
+  if (!records.length) { el.textContent = '尚無資料'; return; }
+  const total = records.reduce((s, r) => s + r.total, 0);
+  const s1 = records.filter(r => r.store === 1).reduce((s, r) => s + r.total, 0);
+  const s2 = records.filter(r => r.store === 2).reduce((s, r) => s + r.total, 0);
+  const dates = [...new Set(records.map(r => r.date))].sort();
+  el.innerHTML = `
+    記錄筆數：<strong style="color:var(--text)">${records.length} 筆</strong><br>
+    合計金額：<strong style="color:var(--yellow)">$${total.toLocaleString()}</strong><br>
+    天母店（1店）：<strong style="color:#5ba5e8">$${s1.toLocaleString()}</strong><br>
+    昌吉店（2店）：<strong style="color:#c97be8">$${s2.toLocaleString()}</strong><br>
+    日期範圍：<strong style="color:var(--text)">${dates[0] || '—'} ~ ${dates[dates.length-1] || '—'}</strong>
+  `;
+}
+
+// ============ UTILS ============
+function saveRecords() { localStorage.setItem('pv_records', JSON.stringify(records)); }
+function updateHeaderCount() { document.getElementById('headerCount').textContent = records.length + ' 筆'; }
+
+let toastTimer;
+function showToast(msg, isError) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.style.background = isError ? '#c0392b' : 'var(--green)';
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 2200);
+}
+
+// Close search results on outside click
+document.addEventListener('click', e => {
+  if (!e.target.closest('.search-wrap')) {
+    document.getElementById('searchResults').style.display = 'none';
+  }
+});
+</script>
+</body>
+</html>
