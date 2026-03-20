@@ -152,6 +152,9 @@ body { background: var(--bg); color: var(--text); font-family: 'PingFang TC','No
 .filter-bar { display: flex; gap: 6px; margin-bottom: 12px; overflow-x: auto; padding-bottom: 2px; }
 .filter-btn { background: var(--surface2); border: 1px solid var(--border); border-radius: 20px; padding: 5px 12px; font-size: 12px; font-weight: 600; color: var(--text2); cursor: pointer; white-space: nowrap; flex-shrink: 0; }
 .filter-btn.active { border-color: var(--accent); color: var(--accent); background: rgba(232,80,42,0.1); }
+.filter-chip { background: var(--surface2); border: 1px solid var(--border); border-radius: 16px; padding: 4px 10px; font-size: 12px; font-weight: 600; color: var(--text2); cursor: pointer; white-space: nowrap; transition: all 0.15s; }
+.filter-chip.active { border-color: var(--accent); color: var(--accent); background: rgba(232,80,42,0.1); }
+.filter-chip:active { opacity: 0.7; }
 
 /* STATS */
 .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
@@ -390,15 +393,69 @@ body { background: var(--bg); color: var(--text); font-family: 'PingFang TC','No
 
 <!-- RECORDS PANEL -->
 <div class="panel" id="panel-records">
-  <div class="filter-bar" id="filterBar">
-    <div class="filter-btn active" onclick="setFilter('all')">全部</div>
-    <div class="filter-btn" onclick="setFilter('1')">天母店</div>
-    <div class="filter-btn" onclick="setFilter('2')">昌吉店</div>
-  </div>
+
+  <!-- 月份 + 筆數 -->
   <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
     <span style="font-size:13px;color:var(--text2);" id="recordsCount">載入中...</span>
     <input type="month" id="monthFilter" style="background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:5px 8px;color:var(--text);font-size:12px;font-family:inherit;" onchange="renderRecords()">
   </div>
+
+  <!-- 篩選卡片 -->
+  <div class="card" style="margin-bottom:12px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+      <span style="font-size:11px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:1px;">🔍 篩選</span>
+      <span style="font-size:12px;color:var(--accent);cursor:pointer;" onclick="clearFilters()">清除篩選</span>
+    </div>
+
+    <!-- 店別 -->
+    <div style="margin-bottom:10px;">
+      <div style="font-size:11px;color:var(--text2);margin-bottom:5px;font-weight:600;">店別</div>
+      <div style="display:flex;gap:6px;">
+        <div class="filter-chip active" id="chipStore-all" onclick="setChip('store','all')">全部</div>
+        <div class="filter-chip" id="chipStore-1" onclick="setChip('store','1')">🏠 天母</div>
+        <div class="filter-chip" id="chipStore-2" onclick="setChip('store','2')">🏪 昌吉</div>
+      </div>
+    </div>
+
+    <!-- 填寫人員 -->
+    <div style="margin-bottom:10px;">
+      <div style="font-size:11px;color:var(--text2);margin-bottom:5px;font-weight:600;">填寫人員</div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px;" id="chipOperators">
+        <div class="filter-chip active" id="chipOp-all" onclick="setChip('operator','all')">全部</div>
+      </div>
+    </div>
+
+    <!-- 廠商 -->
+    <div style="margin-bottom:10px;">
+      <div style="font-size:11px;color:var(--text2);margin-bottom:5px;font-weight:600;">廠商</div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px;" id="chipVendors">
+        <div class="filter-chip active" id="chipVendor-all" onclick="setChip('vendor','all')">全部</div>
+      </div>
+    </div>
+
+    <!-- 類別 -->
+    <div style="margin-bottom:10px;">
+      <div style="font-size:11px;color:var(--text2);margin-bottom:5px;font-weight:600;">費用類別</div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px;" id="chipCats">
+        <div class="filter-chip active" id="chipCat-all" onclick="setChip('cat','all')">全部</div>
+      </div>
+    </div>
+
+    <!-- 關鍵字搜尋 -->
+    <div>
+      <div style="font-size:11px;color:var(--text2);margin-bottom:5px;font-weight:600;">關鍵字搜尋</div>
+      <input type="text" id="keywordFilter" placeholder="品項名稱、識別碼、發票號碼..." 
+        style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:9px 12px;color:var(--text);font-size:14px;font-family:inherit;outline:none;"
+        oninput="renderRecords()">
+    </div>
+  </div>
+
+  <!-- 合計小計 -->
+  <div id="filterSummary" style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px 14px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;">
+    <span style="font-size:12px;color:var(--text2);">篩選結果合計</span>
+    <span style="font-size:16px;font-weight:800;color:var(--yellow);" id="filterTotal">$0</span>
+  </div>
+
   <div id="recordsList"></div>
 </div>
 
@@ -515,7 +572,7 @@ Object.defineProperty(window, 'allRecords', {
 let selectedItem = null;
 let currentStore = 0; // 0 = 未選
 let currentTax = -99; // -99 = 未選擇
-let currentFilter = 'all';
+// filters now in activeFilters object
 let pendingPhotos = []; // {file, dataUrl}
 let searchTimer = null;
 
@@ -825,22 +882,141 @@ async function saveEntry() {
 }
 
 
-// ============ RECORDS ============
-function setFilter(f) {
-  currentFilter = f;
-  document.querySelectorAll('.filter-btn').forEach((b,i) => b.classList.toggle('active', ['all','1','2'][i]===f));
+// ============ RECORDS & FILTERS ============
+let activeFilters = { store: 'all', operator: 'all', vendor: 'all', cat: 'all' };
+
+function setChip(type, val) {
+  activeFilters[type] = val;
+  // Update chip UI
+  document.querySelectorAll(`[id^="chipStore-"]`).forEach(el => el.classList.remove('active'));
+  document.querySelectorAll(`[id^="chipOp-"]`).forEach(el => el.classList.remove('active'));
+  document.querySelectorAll(`[id^="chipVendor-"]`).forEach(el => el.classList.remove('active'));
+  document.querySelectorAll(`[id^="chipCat-"]`).forEach(el => el.classList.remove('active'));
+  const target = type === 'store' ? `chipStore-${val}` : type === 'operator' ? `chipOp-${val}` : type === 'vendor' ? `chipVendor-${val}` : `chipCat-${val}`;
+  const el = document.getElementById(target);
+  if (el) el.classList.add('active');
   renderRecords();
 }
+
+function clearFilters() {
+  activeFilters = { store: 'all', operator: 'all', vendor: 'all', cat: 'all' };
+  document.getElementById('keywordFilter').value = '';
+  // Reset all chips to 'all'
+  ['Store','Op','Vendor','Cat'].forEach(t => {
+    document.querySelectorAll(`[id^="chip${t}-"]`).forEach(el => el.classList.remove('active'));
+    const allChip = document.getElementById(`chip${t}-all`);
+    if (allChip) allChip.classList.add('active');
+  });
+  renderRecords();
+}
+
+function updateFilterChips(recs) {
+  // Operators
+  const ops = [...new Set(recs.map(r => r.operator).filter(Boolean))];
+  const opContainer = document.getElementById('chipOperators');
+  if (opContainer) {
+    const existingAll = opContainer.querySelector('#chipOp-all');
+    opContainer.innerHTML = '';
+    const allChip = document.createElement('div');
+    allChip.className = 'filter-chip' + (activeFilters.operator === 'all' ? ' active' : '');
+    allChip.id = 'chipOp-all';
+    allChip.textContent = '全部';
+    allChip.onclick = () => setChip('operator', 'all');
+    opContainer.appendChild(allChip);
+    ops.forEach(op => {
+      const c = document.createElement('div');
+      c.className = 'filter-chip' + (activeFilters.operator === op ? ' active' : '');
+      c.id = 'chipOp-' + op;
+      c.textContent = '👤 ' + op;
+      c.onclick = () => setChip('operator', op);
+      opContainer.appendChild(c);
+    });
+  }
+
+  // Vendors
+  const vendors = [...new Set(recs.map(r => r.vendor).filter(v => v && v !== '待補'))].slice(0,15);
+  const vendorContainer = document.getElementById('chipVendors');
+  if (vendorContainer) {
+    vendorContainer.innerHTML = '';
+    const allChip = document.createElement('div');
+    allChip.className = 'filter-chip' + (activeFilters.vendor === 'all' ? ' active' : '');
+    allChip.id = 'chipVendor-all';
+    allChip.textContent = '全部';
+    allChip.onclick = () => setChip('vendor', 'all');
+    vendorContainer.appendChild(allChip);
+    vendors.forEach(v => {
+      const c = document.createElement('div');
+      c.className = 'filter-chip' + (activeFilters.vendor === v ? ' active' : '');
+      c.id = 'chipVendor-' + v;
+      c.textContent = v;
+      c.onclick = () => setChip('vendor', v);
+      vendorContainer.appendChild(c);
+    });
+  }
+
+  // Categories - simplified labels
+  const cats = [...new Set(recs.map(r => r.cat).filter(Boolean))];
+  const catContainer = document.getElementById('chipCats');
+  if (catContainer) {
+    catContainer.innerHTML = '';
+    const allChip = document.createElement('div');
+    allChip.className = 'filter-chip' + (activeFilters.cat === 'all' ? ' active' : '');
+    allChip.id = 'chipCat-all';
+    allChip.textContent = '全部';
+    allChip.onclick = () => setChip('cat', 'all');
+    catContainer.appendChild(allChip);
+    cats.forEach(cat => {
+      const c = document.createElement('div');
+      c.className = 'filter-chip' + (activeFilters.cat === cat ? ' active' : '');
+      c.id = 'chipCat-' + CSS.escape(cat);
+      c.textContent = cat;
+      c.onclick = () => setChip('cat', cat);
+      catContainer.appendChild(c);
+    });
+  }
+}
+
+function setFilter(f) { setChip('store', f); }
+
 function renderRecords() {
-  const month = document.getElementById('monthFilter').value;
-  let recs = allRecords.filter(r => r.date && r.date.startsWith(month));
-  if (currentFilter !== 'all') recs = recs.filter(r => String(r.store)===currentFilter);
+  const month = document.getElementById('monthFilter') ? document.getElementById('monthFilter').value : '';
+  const keyword = document.getElementById('keywordFilter') ? document.getElementById('keywordFilter').value.trim().toLowerCase() : '';
+
+  // Base: filter by month
+  let recs = allRecords.filter(r => !month || (r.date && r.date.startsWith(month)));
+
+  // Update chips based on this month's data (before other filters)
+  updateFilterChips(recs);
+
+  // Apply filters
+  if (activeFilters.store !== 'all') recs = recs.filter(r => String(r.store) === activeFilters.store);
+  if (activeFilters.operator !== 'all') recs = recs.filter(r => r.operator === activeFilters.operator);
+  if (activeFilters.vendor !== 'all') recs = recs.filter(r => r.vendor === activeFilters.vendor);
+  if (activeFilters.cat !== 'all') recs = recs.filter(r => r.cat === activeFilters.cat);
+
+  // Keyword search
+  if (keyword) {
+    recs = recs.filter(r =>
+      (r.name && r.name.toLowerCase().includes(keyword)) ||
+      (r.code && r.code.toLowerCase().includes(keyword)) ||
+      (r.invoice && r.invoice.toLowerCase().includes(keyword)) ||
+      (r.vendor && r.vendor.toLowerCase().includes(keyword)) ||
+      (r.operator && r.operator.toLowerCase().includes(keyword))
+    );
+  }
+
+  // Update count & total
+  const total = recs.reduce((s,r) => s+(r.total||0), 0);
   document.getElementById('recordsCount').textContent = `${month} · 共 ${recs.length} 筆`;
+  const filterTotal = document.getElementById('filterTotal');
+  if (filterTotal) filterTotal.textContent = '$' + total.toLocaleString();
+
   const el = document.getElementById('recordsList');
   if (!recs.length) {
-    el.innerHTML = `<div class="empty-state"><div class="em-icon">📋</div><p>這個月份還沒有記錄</p></div>`;
+    el.innerHTML = `<div class="empty-state"><div class="em-icon">📋</div><p>沒有符合條件的記錄</p></div>`;
     return;
   }
+
   el.innerHTML = recs.map(r => `
     <div class="record-item">
       <div class="ri-top">
@@ -849,18 +1025,15 @@ function renderRecords() {
       </div>
       <div class="ri-tags">
         <span class="ri-tag">${r.date}</span>
-        <span class="ri-tag ${r.store===1?'s1':'s2'}">${r.store===1?'天母':'昌吉'}</span>
+        <span class="ri-tag ${r.store===1?'s1':'s2'}">${r.store===1?'🏠天母':'🏪昌吉'}</span>
         ${r.code?`<span class="ri-tag">${r.code}</span>`:''}
         <span class="ri-tag">${r.qty} ${r.unit||''} × $${r.price}</span>
-        ${r.invoice?`<span class="ri-tag">${r.invoice}</span>`:''}
-        ${r.vendor?`<span class="ri-tag">${r.vendor}</span>`:''}
+        ${r.cat?`<span class="ri-tag" style="color:var(--text3);">${r.cat}</span>`:''}
+        ${r.invoice && r.invoice!=='待補'?`<span class="ri-tag">📄${r.invoice}</span>`:'<span class="ri-tag" style="color:var(--text3);">📄待補</span>'}
+        ${r.vendor?`<span class="ri-tag">🏭${r.vendor}</span>`:''}
         ${r.operator?`<span class="ri-tag" style="color:#9a9590;">👤${r.operator}</span>`:''}
-        <span class="ri-tag del" onclick="deleteRecord('${r.id}')">🗑</span>
+        <span class="ri-tag del" onclick="deleteRecord('${r.id}')">🗑 刪除</span>
       </div>
-      ${r.photos && r.photos.length ? `
-        <div class="ri-photos">
-          ${r.photos.map(url=>`<img class="ri-photo" src="${url}" onclick="viewPhoto('${url}')" loading="lazy">`).join('')}
-        </div>` : ''}
     </div>`).join('');
 }
 async function deleteRecord(id) {
