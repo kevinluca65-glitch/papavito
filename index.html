@@ -11,8 +11,7 @@
 body{background:var(--bg);color:var(--tx);font-family:'PingFang TC','Noto Sans TC','Microsoft JhengHei',sans-serif;min-height:100vh;}
 
 /* SCREENS */
-.screen{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:var(--bg);z-index:100;padding:32px;}
-.screen.hidden{display:none;}
+
 
 /* HEADER */
 .hdr{background:var(--s1);border-bottom:1px solid var(--bd);padding:11px 14px;display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:50;}
@@ -147,7 +146,7 @@ body{background:var(--bg);color:var(--tx);font-family:'PingFang TC','Noto Sans T
 <body>
 
 <!-- LOGIN SCREEN -->
-<div class="screen" id="loginScreen">
+<div id="loginScreen" style="position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#0f0f0f;z-index:100;padding:32px;">
   <div style="font-size:52px;margin-bottom:16px;">🍕</div>
   <div style="font-size:22px;font-weight:800;margin-bottom:6px;">Papa Vito 進貨系統</div>
   <div style="font-size:14px;color:var(--t2);margin-bottom:28px;">請輸入你的名字來開始</div>
@@ -632,9 +631,10 @@ function initApp() {
   const saved = localStorage.getItem('pv_op');
   if (saved && saved.trim()) {
     CUR_OP = saved.trim();
+    document.getElementById('loginScreen').style.display = 'none';
     showMainApp();
   } else {
-    document.getElementById('loginScreen').classList.remove('hidden');
+    document.getElementById('loginScreen').style.display = 'flex';
   }
 }
 function doLogin() {
@@ -642,11 +642,11 @@ function doLogin() {
   if (!n) { document.getElementById('loginName').style.borderColor='#e05050'; return; }
   CUR_OP = n;
   localStorage.setItem('pv_op', n);
-  document.getElementById('loginScreen').classList.add('hidden');
+  document.getElementById('loginScreen').style.display = 'none';
   showMainApp();
 }
 function showMainApp() {
-  document.getElementById('loginScreen').classList.add('hidden');
+  document.getElementById('loginScreen').style.display = 'none';
   document.getElementById('appWrap').style.display = 'block';
   document.getElementById('opBadge').textContent = '👤 ' + CUR_OP;
   // init dates
