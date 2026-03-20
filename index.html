@@ -1372,11 +1372,390 @@ function doLogin() {
 }
 function showApp() {
   document.getElementById('loadingScreen').style.display = 'none';
-  document.getElementById('app').style.display = 'block';
-  document.getElementById('operatorBadge').textContent = '👤 ' + currentOperator;
+  document.getElementById('app').style.display = 'none';
+  // 顯示首頁
+  var hs = document.getElementById('homeScreen');
+  hs.style.display = 'flex';
+  document.getElementById('homeGreet').textContent = '歡迎，' + currentOperator + '！';
+  document.getElementById('homeOpName').textContent = currentOperator;
+}
+
+function enterSection(section) {
+  document.getElementById('homeScreen').style.display = 'none';
+  if (section === 'transfer') {
+    document.getElementById('transferApp').style.display = 'block';
+    var d = new Date();
+    document.getElementById('tfDate').value = d.toISOString().split('T')[0];
+    document.getElementById('tfMonth').value = d.toISOString().slice(0,7);
+    initTfListener();
+    renderTf();
+  } else {
+    document.getElementById('app').style.display = 'block';
+    document.getElementById('operatorBadge').textContent = '👤 ' + currentOperator;
+  }
+}
+
+function goHome() {
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('transferApp').style.display = 'none';
+  document.getElementById('homeScreen').style.display = 'flex';
+}
+
+function doLogout() {
+  if (!confirm('確定登出？')) return;
+  localStorage.removeItem('pv_operator');
+  currentOperator = '';
+  document.getElementById('homeScreen').style.display = 'none';
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('transferApp').style.display = 'none';
+  document.getElementById('loadingScreen').style.display = 'none';
+  document.getElementById('loginScreen').style.display = 'flex';
 }
 // Run login check on load
 window.addEventListener('DOMContentLoaded', initLogin);
+
+// ── TRANSFER SYSTEM ──────────────────────────────────────────
+var allTransfers = [];
+var tfSelItem = null;
+var curTfPaid = '未付';
+var tfSearchTimer = null;
+var tfListenerStarted = false;
+
+function initTfListener() {
+  if (tfListenerStarted) return;
+  tfListenerStarted = true;
+  try {
+    var q = window._query(window._collection(window._db, 'transfers'), window._orderBy('date', 'desc'));
+    window._onSnapshot(q, function(snap) {
+      allTransfers = snap.docs.map(function(d){ return Object.assign({id:d.id}, d.data()); });
+      document.getElementById('tfSyncStatus').textContent = '雲端同步 ✓';
+      renderTf();
+    }, function(err) {
+      console.warn('TF err:', err);
+      document.getElementById('tfSyncStatus').textContent = '同步錯誤';
+    });
+  } catch(e) { console.warn('TF init:', e); }
+}
+
+function tfSetDate(off) {
+  var d = new Date(); d.setDate(d.getDate() + off);
+  document.getElementById('tfDate').value = d.toISOString().split('T')[0];
+}
+
+function onTfSearch() {
+  clearTimeout(tfSearchTimer);
+  tfSearchTimer = setTimeout(function() {
+    var q = document.getElementById('tfSearchInput').value.trim().toLowerCase();
+    var el = document.getElementById('tfSearchResults');
+    if (!q) { el.style.display = 'none'; return; }
+    var hits = ITEMS.filter(function(i){ return i.name.toLowerCase().includes(q) || i.code.toLowerCase().includes(q); }).slice(0,10);
+    if (!hits.length) { el.style.display = 'none'; return; }
+    el.innerHTML = hits.map(function(i){
+      return '<div onclick="pickTfItem('' + i.code + '')" style="padding:10px 12px;cursor:pointer;border-bottom:1px solid #2e2e2e;">' +
+        '<div style="font-size:14px;font-weight:600;color:#f0ede8;">' + i.name + '</div>' +
+        '<div style="font-size:11px;color:#9a9590;margin-top:2px;"><span style="color:#e8502a;font-weight:700;">' + i.code + '</span> · ' + (i.unit||'—') + '</div>' +
+        '</div>';
+    }).join('');
+    el.style.display = 'block';
+  }, 150);
+}
+
+function pickTfItem(code) {
+  tfSelItem = ITEMS.find(function(i){ return i.code === code; });
+  if (!tfSelItem) return;
+  document.getElementById('tfSearchInput').value = tfSelItem.name;
+  document.getElementById('tfSearchResults').style.display = 'none';
+  document.getElementById('tfSbCode').textContent = tfSelItem.code;
+  document.getElementById('tfSbName').textContent = tfSelItem.name;
+  document.getElementById('tfSbSpec').textContent = (tfSelItem.spec||'—') + ' · ' + (tfSelItem.unit||'—');
+  document.getElementById('tfSelBadge').style.display = 'block';
+  var WU = ['KG','kg','公斤','斤'];
+  document.getElementById('tfQtyLabel').textContent = WU.includes(tfSelItem.unit) ? '重量（' + tfSelItem.unit + '）' : '數量';
+}
+
+function clearTfSel() {
+  tfSelItem = null;
+  document.getElementById('tfSearchInput').value = '';
+  document.getElementById('tfSelBadge').style.display = 'none';
+}
+
+function setTfPaid(v) {
+  curTfPaid = v;
+  var nBtn = document.getElementById('tfPaidNBtn');
+  var yBtn = document.getElementById('tfPaidYBtn');
+  if (v === '未付') {
+    nBtn.style.border = '2px solid #e8502a'; nBtn.style.color = '#e8502a';
+    yBtn.style.border = '1px solid #2e2e2e'; yBtn.style.color = '#9a9590';
+  } else {
+    yBtn.style.border = '2px solid #4caf72'; yBtn.style.color = '#4caf72';
+    nBtn.style.border = '1px solid #2e2e2e'; nBtn.style.color = '#9a9590';
+  }
+  document.getElementById('tfAmtWrap').style.display = v === '已付' ? 'block' : 'none';
+}
+
+async function saveTf() {
+  var from = document.getElementById('tfFrom').value;
+  var to = document.getElementById('tfTo').value;
+  var date = document.getElementById('tfDate').value;
+  var qtyVal = parseFloat(document.getElementById('tfQty').value);
+  var serial = document.getElementById('tfSerial').value.trim();
+  var paidAmt = curTfPaid === '已付' ? (parseFloat(document.getElementById('tfPaidAmt').value)||0) : 0;
+
+  if (!from) { showToast('❌ 請選擇轉出店', true); return; }
+  if (!to) { showToast('❌ 請選擇轉入店', true); return; }
+  if (from === to) { showToast('❌ 轉出和轉入不能相同', true); return; }
+  if (!date) { showToast('❌ 請選擇日期', true); return; }
+  if (!tfSelItem) { showToast('❌ 請選擇品項', true); return; }
+  if (isNaN(qtyVal) || qtyVal <= 0) { showToast('❌ 請輸入數量', true); return; }
+  if (curTfPaid === '已付' && paidAmt <= 0) { showToast('❌ 請填寫付款金額', true); return; }
+
+  var data = {
+    date: String(date), fromStore: String(from), toStore: String(to),
+    code: String(tfSelItem.code), name: String(tfSelItem.name),
+    spec: String(tfSelItem.spec||''), unit: String(tfSelItem.unit||''),
+    qty: Number(qtyVal), paidAmount: Number(paidAmt),
+    serial: String(serial), paid: String(curTfPaid),
+    operator: String(currentOperator||'未知'),
+    createdAt: window._serverTimestamp()
+  };
+
+  document.getElementById('uploadingOverlay').style.display = 'flex';
+  document.getElementById('uploadingMsg').textContent = '儲存調撥中...';
+  try {
+    await window._addDoc(window._collection(window._db, 'transfers'), data);
+    document.getElementById('uploadingOverlay').style.display = 'none';
+    showToast('✅ 調撥記錄已儲存');
+    clearTfSel();
+    ['tfSerial','tfQty','tfPaidAmt'].forEach(function(id){ var el=document.getElementById(id); if(el) el.value=''; });
+    document.getElementById('tfFrom').value = '';
+    document.getElementById('tfTo').value = '';
+    setTfPaid('未付');
+  } catch(e) {
+    document.getElementById('uploadingOverlay').style.display = 'none';
+    showToast('❌ 儲存失敗：' + e.message, true);
+  }
+}
+
+function tfSName(s) { return s==='1'?'🏠天母':s==='2'?'🏪昌吉':s==='PVK'?'🍳PVK':s; }
+
+function renderTf() {
+  var month = document.getElementById('tfMonth') ? document.getElementById('tfMonth').value : '';
+  var r = allTransfers.filter(function(x){ return !month || (x.date && x.date.startsWith(month)); });
+  var countEl = document.getElementById('tfCount');
+  if (countEl) countEl.textContent = month + ' · 共 ' + r.length + ' 筆調撥';
+  var unpaid = r.filter(function(x){ return x.paid === '未付'; });
+  var ua = document.getElementById('tfUnpaidAlert');
+  if (ua) {
+    ua.style.display = unpaid.length ? 'block' : 'none';
+    if (unpaid.length) document.getElementById('tfUnpaidList').textContent =
+      unpaid.map(function(x){ return x.date + ' ' + tfSName(x.fromStore) + '→' + tfSName(x.toStore) + ' ' + x.name; }).join('、');
+  }
+  var el = document.getElementById('tfList');
+  if (!el) return;
+  if (!r.length) {
+    el.innerHTML = '<div style="text-align:center;padding:40px 16px;color:#5a5550;"><div style="font-size:40px;margin-bottom:10px;">🔄</div><p style="font-size:13px;">這個月份沒有調撥記錄</p></div>';
+    return;
+  }
+  el.innerHTML = r.map(function(x) {
+    return '<div style="background:#1a1a1a;border:1px solid #2e2e2e;border-left:3px solid #5ba5e8;border-radius:10px;padding:11px 13px;margin-bottom:7px;">' +
+      '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;">' +
+      '<div style="font-size:14px;font-weight:700;color:#f0ede8;flex:1;">' + x.name + '</div>' +
+      '<div style="font-size:15px;font-weight:800;color:#5ba5e8;flex-shrink:0;">' + (x.paid==='已付'?'$'+(x.paidAmount||0).toLocaleString():'未付') + '</div>' +
+      '</div>' +
+      '<div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:6px;">' +
+      '<span style="background:#242424;border-radius:4px;padding:2px 7px;font-size:11px;color:#9a9590;">' + x.date + '</span>' +
+      '<span style="background:#242424;border-radius:4px;padding:2px 7px;font-size:11px;color:#5ba5e8;font-weight:700;">' + tfSName(x.fromStore) + ' → ' + tfSName(x.toStore) + '</span>' +
+      '<span style="background:#242424;border-radius:4px;padding:2px 7px;font-size:11px;color:#9a9590;">' + x.code + '</span>' +
+      '<span style="background:#242424;border-radius:4px;padding:2px 7px;font-size:11px;color:#9a9590;">' + x.qty + ' ' + (x.unit||'') + '</span>' +
+      (x.serial ? '<span style="background:#242424;border-radius:4px;padding:2px 7px;font-size:11px;color:#9a9590;">📋' + x.serial + '</span>' : '') +
+      '<span style="background:#242424;border-radius:4px;padding:2px 7px;font-size:11px;color:' + (x.paid==='已付'?'#4caf72':'#f5a623') + ';">' + (x.paid==='已付'?'✅已付':'⏳未付') + '</span>' +
+      '<span style="background:#242424;border-radius:4px;padding:2px 7px;font-size:11px;color:#9a9590;">👤' + (x.operator||'') + '</span>' +
+      '<span onclick="deleteTf('' + x.id + '')" style="background:#2a1515;border-radius:4px;padding:2px 7px;font-size:11px;color:#e05050;cursor:pointer;">🗑 刪除</span>' +
+      '</div></div>';
+  }).join('');
+}
+
+async function deleteTf(id) {
+  if (!confirm('確定刪除？')) return;
+  try { await window._deleteDoc(window._doc(window._db,'transfers',id)); showToast('已刪除'); }
+  catch(e) { showToast('❌ 刪除失敗', true); }
+}
+
+function exportTfCSV() {
+  var month = document.getElementById('tfMonth').value;
+  var r = allTransfers.filter(function(x){ return x.date && x.date.startsWith(month); }).reverse();
+  if (!r.length) { showToast('❌ 沒有資料', true); return; }
+  var hdr = '調撥日期/時間,轉出店,識別碼,品項,規格,單位,單價（未稅）,數量,轉入店,流水號,價格（未稅）,付款完成?,實付金額';
+  var rows = r.map(function(x){
+    return [x.date+' 0:00',x.fromStore,x.code,x.name,x.spec||'',x.unit||'','',x.qty,x.toStore,x.serial||'','',x.paid==='已付'?'Y':'N',x.paidAmount||0]
+      .map(function(v){ return '"'+String(v||'').replace(/"/g,'""')+'"'; }).join(',');
+  });
+  var csv = '﻿' + hdr + '
+' + rows.join('
+');
+  var blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a'); a.href=url; a.download='PapaVito_調撥_'+month+'.csv';
+  a.click(); URL.revokeObjectURL(url);
+  showToast('✅ 調撥 CSV 下載完成！');
+}
+
+function showToast(msg, isErr) {
+  var el = document.getElementById('toast');
+  if (!el) return;
+  el.textContent = msg;
+  el.className = 'toast' + (isErr ? ' err' : '') + ' show';
+  setTimeout(function(){ el.classList.remove('show'); }, 2500);
+}
+
+document.addEventListener('click', function(e) {
+  if (!e.target.closest || !e.target.closest('#tfSearchInput') && !e.target.closest('#tfSearchResults')) {
+    var el = document.getElementById('tfSearchResults');
+    if (el) el.style.display = 'none';
+  }
+});
+
 </script>
+
+<!-- HOME SCREEN (inserted) -->
+<div id="homeScreen" style="display:none;position:fixed;inset:0;background:#0f0f0f;z-index:9990;flex-direction:column;align-items:center;justify-content:center;padding:28px;">
+  <div style="font-size:48px;margin-bottom:10px;">🍕</div>
+  <div style="font-size:20px;font-weight:800;color:#f0ede8;margin-bottom:4px;">Papa Vito</div>
+  <div id="homeGreet" style="font-size:13px;color:#9a9590;margin-bottom:36px;"></div>
+  <div style="width:100%;max-width:320px;display:flex;flex-direction:column;gap:14px;">
+    <button onclick="enterSection('input')"
+      style="background:#e8502a;color:white;border:none;border-radius:14px;padding:20px;font-size:17px;font-weight:800;font-family:inherit;cursor:pointer;display:flex;align-items:center;gap:14px;text-align:left;">
+      <span style="font-size:32px;">📦</span>
+      <div>
+        <div>進貨系統</div>
+        <div style="font-size:12px;font-weight:400;opacity:0.8;margin-top:2px;">記錄進貨、查看記錄、匯出CSV</div>
+      </div>
+    </button>
+    <button onclick="enterSection('transfer')"
+      style="background:#1a1a1a;color:white;border:2px solid #5ba5e8;border-radius:14px;padding:20px;font-size:17px;font-weight:800;font-family:inherit;cursor:pointer;display:flex;align-items:center;gap:14px;text-align:left;">
+      <span style="font-size:32px;">🔄</span>
+      <div>
+        <div style="color:#5ba5e8;">調撥系統</div>
+        <div style="font-size:12px;font-weight:400;color:#9a9590;margin-top:2px;">天母、昌吉、PVK 之間調貨</div>
+      </div>
+    </button>
+  </div>
+  <div style="margin-top:28px;font-size:12px;color:#5a5550;cursor:pointer;" onclick="doLogout()">
+    👤 <span id="homeOpName"></span>　·　登出
+  </div>
+</div>
+
+<!-- TRANSFER APP (inserted) -->
+<div id="transferApp" style="display:none;position:fixed;inset:0;background:#0f0f0f;z-index:9990;overflow-y:auto;">
+  <div style="background:#1a1a1a;border-bottom:1px solid #2e2e2e;padding:11px 14px;display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:50;">
+    <div style="width:34px;height:34px;background:#5ba5e8;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0;">🔄</div>
+    <div style="flex:1;">
+      <div style="font-size:14px;font-weight:700;color:#f0ede8;">調撥系統</div>
+      <div style="font-size:11px;color:#9a9590;" id="tfSyncStatus">連線中...</div>
+    </div>
+    <button onclick="goHome()" style="background:#242424;border:1px solid #2e2e2e;border-radius:8px;padding:6px 12px;color:#9a9590;font-size:12px;font-family:inherit;cursor:pointer;">← 首頁</button>
+  </div>
+  <div style="padding:14px 14px 48px;">
+
+    <div style="background:#1a1a1a;border:1px solid #2e2e2e;border-radius:12px;padding:13px;margin-bottom:11px;">
+      <div style="font-size:11px;font-weight:700;color:#e8502a;text-transform:uppercase;letter-spacing:1px;margin-bottom:11px;">🔄 新增調撥記錄</div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;">
+        <div>
+          <label style="display:block;font-size:12px;color:#9a9590;margin-bottom:4px;font-weight:600;">轉出店</label>
+          <select id="tfFrom" style="width:100%;background:#242424;border:1px solid #2e2e2e;border-radius:8px;padding:10px 12px;color:#f0ede8;font-size:15px;font-family:inherit;outline:none;">
+            <option value="">請選擇</option>
+            <option value="1">🏠 天母店</option>
+            <option value="2">🏪 昌吉店</option>
+            <option value="PVK">🍳 PVK</option>
+          </select>
+        </div>
+        <div>
+          <label style="display:block;font-size:12px;color:#9a9590;margin-bottom:4px;font-weight:600;">轉入店</label>
+          <select id="tfTo" style="width:100%;background:#242424;border:1px solid #2e2e2e;border-radius:8px;padding:10px 12px;color:#f0ede8;font-size:15px;font-family:inherit;outline:none;">
+            <option value="">請選擇</option>
+            <option value="1">🏠 天母店</option>
+            <option value="2">🏪 昌吉店</option>
+            <option value="PVK">🍳 PVK</option>
+          </select>
+        </div>
+      </div>
+
+      <div style="margin-bottom:10px;">
+        <label style="display:block;font-size:12px;color:#9a9590;margin-bottom:4px;font-weight:600;">日期</label>
+        <input type="date" id="tfDate" style="width:100%;background:#242424;border:1px solid #2e2e2e;border-radius:8px;padding:10px 12px;color:#f0ede8;font-size:15px;font-family:inherit;outline:none;">
+        <div style="display:flex;gap:5px;margin-top:5px;">
+          <div onclick="tfSetDate(0)" style="flex:1;background:#242424;border:1px solid #2e2e2e;border-radius:6px;padding:6px 4px;text-align:center;font-size:11px;font-weight:600;color:#9a9590;cursor:pointer;">今天</div>
+          <div onclick="tfSetDate(-1)" style="flex:1;background:#242424;border:1px solid #2e2e2e;border-radius:6px;padding:6px 4px;text-align:center;font-size:11px;font-weight:600;color:#9a9590;cursor:pointer;">昨天</div>
+          <div onclick="tfSetDate(-2)" style="flex:1;background:#242424;border:1px solid #2e2e2e;border-radius:6px;padding:6px 4px;text-align:center;font-size:11px;font-weight:600;color:#9a9590;cursor:pointer;">前天</div>
+        </div>
+      </div>
+
+      <div style="margin-bottom:10px;">
+        <label style="display:block;font-size:12px;color:#9a9590;margin-bottom:4px;font-weight:600;">品項</label>
+        <div style="position:relative;">
+          <input type="text" id="tfSearchInput" placeholder="輸入品項名稱或識別碼" autocomplete="off" oninput="onTfSearch()"
+            style="width:100%;background:#242424;border:1px solid #2e2e2e;border-radius:8px;padding:10px 12px 10px 32px;color:#f0ede8;font-size:15px;font-family:inherit;outline:none;">
+          <span style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:#5a5550;font-size:14px;pointer-events:none;">🔍</span>
+          <div id="tfSearchResults" style="display:none;position:absolute;left:0;right:0;background:#242424;border:1px solid #e8502a;border-top:none;border-radius:0 0 10px 10px;z-index:200;max-height:200px;overflow-y:auto;box-shadow:0 8px 20px rgba(0,0,0,.6);"></div>
+        </div>
+      </div>
+      <div id="tfSelBadge" style="display:none;background:#242424;border:1px solid #4caf72;border-radius:8px;padding:9px 11px;margin-bottom:10px;">
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span id="tfSbCode" style="background:#4caf72;color:white;border-radius:4px;padding:2px 7px;font-size:11px;font-weight:800;flex-shrink:0;"></span>
+          <div style="flex:1;"><div id="tfSbName" style="font-size:13px;font-weight:700;color:#f0ede8;"></div><div id="tfSbSpec" style="font-size:11px;color:#9a9590;margin-top:1px;"></div></div>
+          <span onclick="clearTfSel()" style="color:#5a5550;font-size:18px;cursor:pointer;line-height:1;">✕</span>
+        </div>
+      </div>
+
+      <div style="margin-bottom:10px;">
+        <label id="tfQtyLabel" style="display:block;font-size:12px;color:#9a9590;margin-bottom:4px;font-weight:600;">數量</label>
+        <input type="number" id="tfQty" placeholder="0" step="0.1" min="0" inputmode="decimal"
+          style="width:100%;background:#242424;border:1px solid #2e2e2e;border-radius:8px;padding:10px 12px;color:#f0ede8;font-size:15px;font-family:inherit;outline:none;">
+      </div>
+
+      <div style="margin-bottom:10px;">
+        <label style="display:block;font-size:12px;color:#9a9590;margin-bottom:4px;font-weight:600;">三聯單流水號 <span style="color:#5a5550;font-weight:400;font-size:11px;">（選填）</span></label>
+        <input type="text" id="tfSerial" placeholder="如 3002"
+          style="width:100%;background:#242424;border:1px solid #2e2e2e;border-radius:8px;padding:10px 12px;color:#f0ede8;font-size:15px;font-family:inherit;outline:none;">
+      </div>
+
+      <div style="margin-bottom:10px;">
+        <label style="display:block;font-size:12px;color:#9a9590;margin-bottom:4px;font-weight:600;">付款狀態</label>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
+          <div id="tfPaidNBtn" onclick="setTfPaid('未付')"
+            style="background:#242424;border:2px solid #e8502a;border-radius:8px;padding:9px 6px;text-align:center;cursor:pointer;font-size:13px;font-weight:700;color:#e8502a;">⏳ 未付款</div>
+          <div id="tfPaidYBtn" onclick="setTfPaid('已付')"
+            style="background:#242424;border:1px solid #2e2e2e;border-radius:8px;padding:9px 6px;text-align:center;cursor:pointer;font-size:13px;font-weight:700;color:#9a9590;">✅ 當場已付</div>
+        </div>
+      </div>
+      <div id="tfAmtWrap" style="display:none;margin-bottom:10px;">
+        <label style="display:block;font-size:12px;color:#9a9590;margin-bottom:4px;font-weight:600;">付款金額（元）</label>
+        <input type="number" id="tfPaidAmt" placeholder="實際付了多少" step="1" min="0" inputmode="decimal"
+          style="width:100%;background:#242424;border:1px solid #2e2e2e;border-radius:8px;padding:10px 12px;color:#f0ede8;font-size:15px;font-family:inherit;outline:none;">
+      </div>
+
+      <button onclick="saveTf()"
+        style="width:100%;background:#5ba5e8;color:white;border:none;border-radius:10px;padding:13px;font-size:15px;font-weight:700;font-family:inherit;cursor:pointer;margin-top:4px;">
+        🔄 儲存調撥記錄
+      </button>
+    </div>
+
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+      <span style="font-size:13px;color:#9a9590;" id="tfCount">—</span>
+      <input type="month" id="tfMonth" onchange="renderTf()"
+        style="background:#242424;border:1px solid #2e2e2e;border-radius:6px;padding:5px 8px;color:#f0ede8;font-size:12px;font-family:inherit;">
+    </div>
+    <div id="tfUnpaidAlert" style="display:none;background:rgba(245,166,35,0.1);border:1px solid #f5a623;border-radius:9px;padding:10px 13px;margin-bottom:10px;">
+      <div style="font-size:13px;color:#f5a623;font-weight:700;">⚠️ 有未付款調撥記錄</div>
+      <div id="tfUnpaidList" style="font-size:11px;color:#9a9590;margin-top:3px;"></div>
+    </div>
+    <div id="tfList"></div>
+    <button onclick="exportTfCSV()"
+      style="width:100%;background:#4caf72;color:white;border:none;border-radius:10px;padding:13px;font-size:15px;font-weight:700;font-family:inherit;cursor:pointer;margin-top:12px;">
+      📥 匯出調撥 CSV
+    </button>
+  </div>
+</div>
 </body>
 </html>
