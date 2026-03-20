@@ -218,6 +218,7 @@ body { background: var(--bg); color: var(--text); font-family: 'PingFang TC','No
   <div class="tab active" onclick="switchTab('input')">📝 輸入</div>
   <div class="tab" onclick="switchTab('records')">📋 記錄</div>
   <div class="tab" onclick="switchTab('export')">📤 匯出</div>
+  <div class="tab" onclick="switchTab('admin')">⚙️ 管理</div>
 </div>
 
 <!-- INPUT PANEL -->
@@ -484,6 +485,41 @@ body { background: var(--bg); color: var(--text); font-family: 'PingFang TC','No
   </div>
 </div>
 
+<!-- ADMIN PANEL -->
+<div class="panel" id="panel-admin">
+  <div class="card">
+    <div class="card-title">➕ 新增品項到資料庫</div>
+    <p style="font-size:12px;color:var(--text2);margin-bottom:12px;line-height:1.6;">新增後立即可在輸入頁面搜尋到。識別碼請依照現有規則（A083、C036…）</p>
+    <div class="field-row">
+      <div class="field"><label>識別碼</label><input type="text" id="newItemCode" placeholder="如 A083" style="text-transform:uppercase;"></div>
+      <div class="field"><label>類別前綴</label>
+        <select id="newItemCat">
+          <option value="食材-乾貨">A - 食材乾貨</option>
+          <option value="食材-冷藏">B - 食材冷藏</option>
+          <option value="食材-生鮮">C - 生鮮蔬果</option>
+          <option value="飲料">D - 飲料</option>
+          <option value="成品">F - 成品</option>
+          <option value="包材">G - 包材</option>
+          <option value="耗材">J - 耗材</option>
+          <option value="冷凍">M/P - 冷凍</option>
+        </select>
+      </div>
+    </div>
+    <div class="field"><label>品項名稱</label><input type="text" id="newItemName" placeholder="如 孔雀餅乾"></div>
+    <div class="field-row">
+      <div class="field"><label>規格</label><input type="text" id="newItemSpec" placeholder="如 150G/包"></div>
+      <div class="field"><label>單位</label><input type="text" id="newItemUnit" placeholder="如 包、罐、KG"></div>
+    </div>
+    <button class="btn-primary" onclick="addCustomItem()">➕ 新增品項</button>
+  </div>
+
+  <div class="card">
+    <div class="card-title">📦 自訂品項清單</div>
+    <p style="font-size:12px;color:var(--text2);margin-bottom:10px;">你新增的品項（可刪除）</p>
+    <div id="customItemsList"></div>
+  </div>
+</div>
+
 </div><!-- /app -->
 
 <!-- PHOTO VIEWER -->
@@ -600,11 +636,12 @@ function setSyncDot(state) {
 
 // ============ TABS ============
 function switchTab(t) {
-  document.querySelectorAll('.tab').forEach((el,i) => el.classList.toggle('active', ['input','records','export'][i]===t));
+  document.querySelectorAll('.tab').forEach((el,i) => el.classList.toggle('active', ['input','records','export','admin'][i]===t));
   document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
   document.getElementById('panel-'+t).classList.add('active');
   if (t==='records') renderRecords();
   if (t==='export') updateStats();
+  if (t==='admin') renderAdminItems();
 }
 
 // ============ STORE / TAX ============
@@ -667,6 +704,21 @@ function selectItem(code) {
   document.getElementById('miscCheck').checked = false;
   document.getElementById('miscSection').style.display = 'none';
   checkWeightMode();
+  // 若 J/G 系列，顯示費用類別選擇器
+  const prefix = selectedItem.code.charAt(0).toUpperCase();
+  const catWrap = document.getElementById('itemCatWrap');
+  const catSelect = document.getElementById('itemCatSelect');
+  if (catWrap && catSelect) {
+    if (prefix === 'J') {
+      catWrap.style.display = 'block';
+      catSelect.value = getAutoCat(selectedItem);
+    } else if (prefix === 'G') {
+      catWrap.style.display = 'block';
+      catSelect.value = '2、販售性包材成本';
+    } else {
+      catWrap.style.display = 'none';
+    }
+  }
   // reset values
   document.getElementById('qty').value = '';
   document.getElementById('price').value = '';
@@ -681,6 +733,8 @@ function clearSelected() {
   isWeightMode = false;
   document.getElementById('normalMode').style.display = 'block';
   document.getElementById('weightMode').style.display = 'none';
+  const catWrap = document.getElementById('itemCatWrap');
+  if (catWrap) catWrap.style.display = 'none';
 }
 function toggleMisc() {
   const on = document.getElementById('miscCheck').checked;
@@ -782,8 +836,12 @@ async function saveEntry() {
     name = selectedItem.name;
     spec = selectedItem.spec || '';
     unit = selectedItem.unit || '';
-    if (['包材','耗材'].includes(selectedItem.cat)) cat = '2.3、物料消耗';
-    else cat = '1、食材成本';
+    cat = getAutoCat(selectedItem);
+    // J系列需要員工手選，已在UI處理
+    if (selectedItem.code.startsWith('J') || selectedItem.code.startsWith('G')) {
+      const selCat = document.getElementById('itemCatSelect') ? document.getElementById('itemCatSelect').value : '';
+      if (selCat) cat = selCat;
+    }
   }
 
   // ── 數量與金額計算 ──
@@ -855,6 +913,7 @@ async function saveEntry() {
     await window._addDoc(window._collection(window._db, 'entries'), entryData);
     document.getElementById('uploadingOverlay').style.display = 'none';
     toast('✅ 已儲存：' + name);
+    rememberVendor(vendor);
 
     // Reset form
     document.getElementById('qty').value = '';
@@ -1116,13 +1175,28 @@ function toast(msg, isErr) {
   toastTimer = setTimeout(() => el.classList.remove('show'), 2500);
 }
 // ============ VENDOR SEARCH ============
-const VENDORS = ['中鈺','大永','好市多','蝦皮','家樂福','酷澎','全聯','順利','全家','7-ELEVEN','寶宏','璟厚','UBER','利欣','展盈','昶翔','台北水','拓野','士東市場','錢櫃','偉旗','台電','威耀時代','開元','建成環保','仁偉商行','新生活','LALAMOVE','宇哥'];
+// 廠商記憶：內建清單 + 用過的廠商都記住
+const BASE_VENDORS = ['中鈺','大永','好市多','蝦皮','家樂福','酷澎','全聯','順利','全家','7-ELEVEN','寶宏','璟厚','UBER','利欣','展盈','昶翔','台北水','拓野','士東市場','錢櫃','偉旗','台電','威耀時代','開元','建成環保','仁偉商行','新生活','LALAMOVE','宇哥'];
+
+function getAllVendors() {
+  const saved = JSON.parse(localStorage.getItem('pv_vendors') || '[]');
+  const combined = [...new Set([...BASE_VENDORS, ...saved])];
+  return combined.sort((a,b) => a.localeCompare(b, 'zh-TW'));
+}
+function rememberVendor(v) {
+  if (!v || BASE_VENDORS.includes(v)) return;
+  const saved = JSON.parse(localStorage.getItem('pv_vendors') || '[]');
+  if (!saved.includes(v)) {
+    saved.push(v);
+    localStorage.setItem('pv_vendors', JSON.stringify(saved));
+  }
+}
 
 function onVendorSearch() {
   const q = document.getElementById('vendor').value.trim().toLowerCase();
   const el = document.getElementById('vendorResults');
   if (!q || q.length < 1) { el.style.display='none'; return; }
-  const hits = VENDORS.filter(v => v.toLowerCase().includes(q)).slice(0,8);
+  const hits = getAllVendors().filter(v => v.toLowerCase().includes(q)).slice(0,10);
   if (!hits.length) { el.style.display='none'; return; }
   el.innerHTML = hits.map(v => `<div class="sri" onclick="selectVendor('${v}')" style="padding:9px 12px;"><div class="sri-name">${v}</div></div>`).join('');
   el.style.display = 'block';
@@ -1136,6 +1210,18 @@ function selectVendor(v) {
 let inputMode = 'pretax'; // pretax = 輸入未稅, posttax = 輸入含稅
 let isWeightMode = false;
 const WEIGHT_UNITS = ['KG', 'kg', '公斤', '斤', 'G', 'g', '公克', '克'];
+
+// 自動判斷費用類別
+function getAutoCat(item) {
+  if (!item) return '1、食材成本';
+  const code = item.code;
+  const prefix = code.charAt(0).toUpperCase();
+  if (['A','B','C','D','F'].includes(prefix)) return '1、食材成本';
+  if (prefix === 'G') return '2、販售性包材成本';
+  if (prefix === 'J') return '2.3、物料消耗'; // 預設，員工可改
+  if (prefix === 'P' || prefix === 'M') return '1、食材成本';
+  return '1、食材成本';
+}
 
 function checkWeightMode() {
   const useWeight = selectedItem && WEIGHT_UNITS.includes(selectedItem.unit);
@@ -1185,6 +1271,80 @@ document.addEventListener('click', e => {
     const vr = document.getElementById('vendorResults');
     if (vr) vr.style.display='none';
   }
+});
+
+// ============ ADMIN - CUSTOM ITEMS ============
+function getCustomItems() {
+  return JSON.parse(localStorage.getItem('pv_custom_items') || '[]');
+}
+function saveCustomItems(items) {
+  localStorage.setItem('pv_custom_items', JSON.stringify(items));
+}
+
+// Merge custom items into ITEMS array
+function mergeCustomItems() {
+  const custom = getCustomItems();
+  custom.forEach(item => {
+    if (!ITEMS.find(i => i.code === item.code)) {
+      ITEMS.push(item);
+    }
+  });
+}
+
+function addCustomItem() {
+  const code = document.getElementById('newItemCode').value.trim().toUpperCase();
+  const cat = document.getElementById('newItemCat').value;
+  const name = document.getElementById('newItemName').value.trim();
+  const spec = document.getElementById('newItemSpec').value.trim();
+  const unit = document.getElementById('newItemUnit').value.trim();
+  if (!code) { toast('❌ 請填識別碼', true); return; }
+  if (!name) { toast('❌ 請填品項名稱', true); return; }
+  if (ITEMS.find(i => i.code === code)) { toast('❌ 識別碼已存在：' + code, true); return; }
+  const newItem = { code, name, spec, unit, cat, custom: true };
+  const custom = getCustomItems();
+  custom.push(newItem);
+  saveCustomItems(custom);
+  ITEMS.push(newItem);
+  document.getElementById('newItemCode').value = '';
+  document.getElementById('newItemName').value = '';
+  document.getElementById('newItemSpec').value = '';
+  document.getElementById('newItemUnit').value = '';
+  toast('✅ 已新增：' + name);
+  renderAdminItems();
+}
+
+function deleteCustomItem(code) {
+  if (!confirm('確定刪除 ' + code + '？')) return;
+  const custom = getCustomItems().filter(i => i.code !== code);
+  saveCustomItems(custom);
+  const idx = ITEMS.findIndex(i => i.code === code);
+  if (idx > -1) ITEMS.splice(idx, 1);
+  toast('已刪除');
+  renderAdminItems();
+}
+
+function renderAdminItems() {
+  const custom = getCustomItems();
+  const el = document.getElementById('customItemsList');
+  if (!el) return;
+  if (!custom.length) {
+    el.innerHTML = '<p style="font-size:13px;color:var(--text3);text-align:center;padding:16px;">尚無自訂品項</p>';
+    return;
+  }
+  el.innerHTML = custom.map(i => `
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border);">
+      <div>
+        <span style="background:var(--accent);color:white;border-radius:4px;padding:2px 7px;font-size:11px;font-weight:800;margin-right:8px;">${i.code}</span>
+        <span style="font-size:14px;font-weight:600;">${i.name}</span>
+        <span style="font-size:11px;color:var(--text2);margin-left:6px;">${i.spec||''} · ${i.unit||''}</span>
+      </div>
+      <button class="btn-danger-sm" onclick="deleteCustomItem('${i.code}')">刪除</button>
+    </div>`).join('');
+}
+
+// Load custom items on start
+window.addEventListener('DOMContentLoaded', () => {
+  mergeCustomItems();
 });
 
 // ============ LOGIN ============
