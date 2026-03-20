@@ -514,7 +514,7 @@ Object.defineProperty(window, 'allRecords', {
 });
 let selectedItem = null;
 let currentStore = 0; // 0 = 未選
-let currentTax = 0;
+let currentTax = -99; // -99 = 未選擇
 let currentFilter = 'all';
 let pendingPhotos = []; // {file, dataUrl}
 let searchTimer = null;
@@ -568,8 +568,8 @@ function setTax(v) {
   currentTax = v;
   document.getElementById('taxBtn0').classList.toggle('active', v===0);
   document.getElementById('taxBtn5').classList.toggle('active', v===0.05);
-  const btnX = document.getElementById('taxBtnX');
-  if (btnX) btnX.classList.toggle('active', v===-1);
+  const taxHint = document.getElementById('taxHint');
+  if (taxHint) taxHint.style.display = (v === -99) ? 'inline' : 'none';
   updatePreview();
 }
 
@@ -698,7 +698,7 @@ async function saveEntry() {
   const vendor = document.getElementById('vendor').value.trim();
   const invoice = document.getElementById('invoice').value.trim().toUpperCase();
 
-  // 驗證
+  // ── 基本驗證 ──
   if (currentStore === 0) {
     const hint = document.getElementById('storeHint');
     if (hint) hint.style.display = 'block';
@@ -708,89 +708,122 @@ async function saveEntry() {
   }
   const hint = document.getElementById('storeHint');
   if (hint) hint.style.display = 'none';
-  if (!date) { toast('❌ 請選擇日期', true); return; }
-  if (!vendor) { toast('❌ 請填寫廠商', true); document.getElementById('vendor').focus(); return; }
-  // 發票：選填，但提示月結廠商可填「月結」
-  // invoice 不強制驗證
 
-  let code='', name='', spec='', unit='', cat='';
+  if (!date) { toast('❌ 請選擇日期', true); return; }
+  if (currentTax === -99) { toast('❌ 請選擇稅別', true); return; }
+  if (!vendor) { toast('❌ 請填寫廠商', true); document.getElementById('vendor').focus(); return; }
+
+  // ── 品項驗證 ──
+  let code = '', name = '', spec = '', unit = '', cat = '';
   if (isMisc) {
     cat = document.getElementById('miscCat').value;
     name = document.getElementById('miscName').value.trim() || cat;
     if (!name) { toast('❌ 請輸入品項描述', true); return; }
   } else {
     if (!selectedItem) { toast('❌ 請選擇品項', true); return; }
-    code=selectedItem.code; name=selectedItem.name; spec=selectedItem.spec; unit=selectedItem.unit;
-    if (['包材','耗材'].includes(selectedItem.cat)) cat='2.3、物料消耗';
-    else cat='1、食材成本';
+    code = selectedItem.code;
+    name = selectedItem.name;
+    spec = selectedItem.spec || '';
+    unit = selectedItem.unit || '';
+    if (['包材','耗材'].includes(selectedItem.cat)) cat = '2.3、物料消耗';
+    else cat = '1、食材成本';
   }
 
-  let sub, total, finalQty, finalPrice;
-  const taxRate = currentTax >= 0 ? currentTax : 0;
+  // ── 數量與金額計算 ──
+  if (currentTax === -99) {
+    document.getElementById('totalPreview').textContent = '請先選擇稅別';
+    return;
+  }
+  const taxRate = (currentTax > 0) ? currentTax : 0;
+  let finalQty = 0;
+  let finalPrice = 0;
+  let sub = 0;
+  let total = 0;
 
   if (isWeightMode) {
-    finalQty = parseFloat(document.getElementById('weightQty').value)||0;
-    const totalPaidVal = parseFloat(document.getElementById('totalPaid').value)||0;
-    if (finalQty <= 0 || totalPaidVal <= 0) { toast('❌ 請填寫重量和總金額', true); return; }
+    finalQty = parseFloat(document.getElementById('weightQty').value);
+    const totalPaidStr = document.getElementById('totalPaid').value;
+    const totalPaidVal = parseFloat(totalPaidStr);
+    if (isNaN(finalQty) || finalQty <= 0) { toast('❌ 請填寫重量', true); return; }
+    if (isNaN(totalPaidVal) || totalPaidVal <= 0) { toast('❌ 請填寫總金額', true); return; }
     if (inputMode === 'posttax') {
-      total = totalPaidVal;
+      total = Math.round(totalPaidVal);
       sub = taxRate > 0 ? Math.round(total / (1 + taxRate)) : total;
     } else {
-      sub = totalPaidVal;
+      sub = Math.round(totalPaidVal);
       total = Math.round(sub * (1 + taxRate));
     }
     finalPrice = finalQty > 0 ? Math.round((sub / finalQty) * 100) / 100 : 0;
   } else {
-    finalQty = parseFloat(document.getElementById('qty').value)||0;
-    finalPrice = parseFloat(document.getElementById('price').value)||0;
-    if (isNaN(finalQty)||finalQty<=0) { toast('❌ 請輸入數量', true); return; }
-    if (isNaN(finalPrice)||finalPrice<0) { toast('❌ 請輸入單價', true); return; }
+    finalQty = parseFloat(document.getElementById('qty').value);
+    finalPrice = parseFloat(document.getElementById('price').value);
+    if (isNaN(finalQty) || finalQty <= 0) { toast('❌ 請輸入數量', true); return; }
+    if (isNaN(finalPrice) || finalPrice < 0) { toast('❌ 請輸入單價', true); return; }
     if (inputMode === 'posttax') {
-      total = Math.round(qty * price);
+      total = Math.round(finalQty * finalPrice);
       sub = taxRate > 0 ? Math.round(total / (1 + taxRate)) : total;
     } else {
-      sub = Math.round(qty * price);
+      sub = Math.round(finalQty * finalPrice);
       total = Math.round(sub * (1 + taxRate));
     }
   }
+
   const taxVal = currentTax === 0.05 ? 0.05 : 0;
 
-  // Show uploading
+  // ── 確保所有存入 Firebase 的值都是基本型態 ──
+  const entryData = {
+    date: String(date),
+    cat: String(cat),
+    code: String(code),
+    name: String(name),
+    spec: String(spec),
+    unit: String(unit),
+    qty: Number(finalQty),
+    price: Number(finalPrice),
+    subtotal: Number(sub),
+    total: Number(total),
+    tax: Number(taxVal),
+    vendor: String(vendor),
+    invoice: String(invoice || '待補'),
+    store: Number(currentStore),
+    operator: String(currentOperator || '未知'),
+    createdAt: window._serverTimestamp()
+  };
+
+  // ── 儲存 ──
   document.getElementById('uploadingOverlay').style.display = 'flex';
   document.getElementById('uploadingMsg').textContent = '儲存中...';
-  if (typeof setSyncDot === 'function') setSyncDot('syncing');
 
   try {
-    document.getElementById('uploadingMsg').textContent = '儲存記錄...';
-    await window._addDoc(window._collection(window._db, 'entries'), {
-      date, cat, code, name, spec, unit,
-      qty, price: Math.round(price*100)/100,
-      subtotal: sub, total, tax: taxVal,
-      vendor, invoice, store: currentStore,
-      createdAt: window._serverTimestamp()
-    });
-
+    await window._addDoc(window._collection(window._db, 'entries'), entryData);
     document.getElementById('uploadingOverlay').style.display = 'none';
     toast('✅ 已儲存：' + name);
 
-    // Reset
+    // Reset form
     document.getElementById('qty').value = '';
     document.getElementById('price').value = '';
-    if (document.getElementById('weightQty')) document.getElementById('weightQty').value = '';
-    if (document.getElementById('totalPaid')) document.getElementById('totalPaid').value = '';
+    const wq = document.getElementById('weightQty');
+    if (wq) wq.value = '';
+    const tp = document.getElementById('totalPaid');
+    if (tp) tp.value = '';
     document.getElementById('vendor').value = '';
     document.getElementById('invoice').value = '';
     document.getElementById('totalPreview').textContent = '—';
     clearSelected();
     document.getElementById('miscCheck').checked = false;
     document.getElementById('miscSection').style.display = 'none';
+    // 重置稅別
+    setTax(-99);
+    // 重置店別
+    setStore(0);
+
   } catch(err) {
     document.getElementById('uploadingOverlay').style.display = 'none';
-    console.error(err);
+    console.error('Save error:', err);
     toast('❌ 儲存失敗：' + err.message, true);
-    setSyncDot('offline');
   }
 }
+
 
 // ============ RECORDS ============
 function setFilter(f) {
