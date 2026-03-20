@@ -170,6 +170,8 @@ body { background: var(--bg); color: var(--text); font-family: 'PingFang TC','No
 /* UPLOADING OVERLAY */
 .uploading-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 500; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; }
 .uploading-overlay p { font-size: 16px; font-weight: 700; color: white; }
+.sort-btn{background:var(--surface2);border:1px solid var(--border);border-radius:14px;padding:4px 10px;font-size:11px;font-weight:600;color:var(--text2);cursor:pointer;white-space:nowrap;flex-shrink:0;}
+.sort-btn.active{border-color:var(--accent);color:var(--accent);background:rgba(232,80,42,0.1);}
 </style>
 </head>
 <body>
@@ -212,6 +214,7 @@ body { background: var(--bg); color: var(--text); font-family: 'PingFang TC','No
   <div class="sync-dot syncing" id="syncDot"></div>
   <div style="font-size:11px;color:#9a9590;flex-shrink:0;" id="operatorBadge"></div>
   <div class="record-count-badge" id="headerCount">0</div>
+  <button onclick="goHome()" style="background:#242424;border:1px solid #2e2e2e;border-radius:8px;padding:5px 10px;color:#9a9590;font-size:11px;font-family:inherit;cursor:pointer;flex-shrink:0;">🏠</button>
 </div>
 
 <div class="tabs">
@@ -300,7 +303,7 @@ body { background: var(--bg); color: var(--text); font-family: 'PingFang TC','No
   <div class="card">
     <div class="card-title">進貨資料</div>
     <div class="field">
-      <label>日期</label>
+      <label>發票 / 收據日期</label>
       <input type="date" id="entryDate">
       <div class="date-quick">
         <div class="dq-btn" onclick="setDate(0)">今天</div>
@@ -396,9 +399,17 @@ body { background: var(--bg); color: var(--text); font-family: 'PingFang TC','No
 <div class="panel" id="panel-records">
 
   <!-- 月份 + 筆數 -->
-  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
-    <span style="font-size:13px;color:var(--text2);" id="recordsCount">載入中...</span>
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;gap:6px;">
+    <span style="font-size:13px;color:var(--text2);flex-shrink:0;" id="recordsCount">載入中...</span>
     <input type="month" id="monthFilter" style="background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:5px 8px;color:var(--text);font-size:12px;font-family:inherit;" onchange="renderRecords()">
+  </div>
+  <div style="display:flex;align-items:center;gap:6px;margin-bottom:10px;overflow-x:auto;padding-bottom:2px;">
+    <span style="font-size:11px;color:var(--text3);flex-shrink:0;">排序：</span>
+    <div class="sort-btn active" id="sort-date" onclick="setSort('date')">⏱ 輸入時間</div>
+    <div class="sort-btn" id="sort-invdate" onclick="setSort('invdate')">📅 發票日期</div>
+    <div class="sort-btn" id="sort-cat" onclick="setSort('cat')">📂 類別</div>
+    <div class="sort-btn" id="sort-code" onclick="setSort('code')">🔤 品項編號</div>
+    <div class="sort-btn" id="sort-amt" onclick="setSort('amt')">💰 金額高低</div>
   </div>
 
   <!-- 篩選卡片 -->
@@ -941,6 +952,16 @@ async function saveEntry() {
 }
 
 
+// ============ SORT ============
+let currentSort = 'date';
+function setSort(s) {
+  currentSort = s;
+  document.querySelectorAll('.sort-btn').forEach(b => b.classList.remove('active'));
+  const btn = document.getElementById('sort-' + s);
+  if (btn) btn.classList.add('active');
+  renderRecords();
+}
+
 // ============ RECORDS & FILTERS ============
 let activeFilters = { store: 'all', operator: 'all', vendor: 'all', cat: 'all' };
 
@@ -1064,8 +1085,34 @@ function renderRecords() {
     );
   }
 
+  // 排序
+  if (currentSort === 'date') {
+    recs.sort((a,b) => (b.createdAt?.seconds||0) - (a.createdAt?.seconds||0));
+  } else if (currentSort === 'invdate') {
+    recs.sort((a,b) => (b.date||'').localeCompare(a.date||''));
+  } else if (currentSort === 'cat') {
+    recs.sort((a,b) => (a.cat||'').localeCompare(b.cat||'', 'zh-TW'));
+  } else if (currentSort === 'code') {
+    recs.sort((a,b) => (a.code||'').localeCompare(b.code||''));
+  } else if (currentSort === 'amt') {
+    recs.sort((a,b) => (b.total||0) - (a.total||0));
+  }
+
   // Update count & total
   const total = recs.reduce((s,r) => s+(r.total||0), 0);
+  // 排序
+  if (currentSort === 'date') {
+    recs.sort((a,b) => (b.createdAt?.seconds||0) - (a.createdAt?.seconds||0));
+  } else if (currentSort === 'invdate') {
+    recs.sort((a,b) => (b.date||'').localeCompare(a.date||''));
+  } else if (currentSort === 'cat') {
+    recs.sort((a,b) => (a.cat||'').localeCompare(b.cat||'', 'zh-TW'));
+  } else if (currentSort === 'code') {
+    recs.sort((a,b) => (a.code||'').localeCompare(b.code||''));
+  } else if (currentSort === 'amt') {
+    recs.sort((a,b) => (b.total||0) - (a.total||0));
+  }
+
   document.getElementById('recordsCount').textContent = `${month} · 共 ${recs.length} 筆`;
   const filterTotal = document.getElementById('filterTotal');
   if (filterTotal) filterTotal.textContent = '$' + total.toLocaleString();
@@ -1653,10 +1700,7 @@ function exportTfCSV() {
         <label id="tfQtyLabel" style="display:block;font-size:12px;color:#9a9590;margin-bottom:4px;font-weight:600;">數量</label>
         <input type="number" id="tfQty" placeholder="0" step="0.1" min="0" inputmode="decimal" style="width:100%;background:#242424;border:1px solid #2e2e2e;border-radius:8px;padding:10px 12px;color:#f0ede8;font-size:15px;font-family:inherit;outline:none;">
       </div>
-      <div style="margin-bottom:10px;">
-        <label style="display:block;font-size:12px;color:#9a9590;margin-bottom:4px;font-weight:600;">三聯單流水號 <span style="color:#5a5550;font-weight:400;font-size:11px;">（選填）</span></label>
-        <input type="text" id="tfSerial" placeholder="如 3002" style="width:100%;background:#242424;border:1px solid #2e2e2e;border-radius:8px;padding:10px 12px;color:#f0ede8;font-size:15px;font-family:inherit;outline:none;">
-      </div>
+      <input type="hidden" id="tfSerial" value="">
       <div style="margin-bottom:10px;">
         <label style="display:block;font-size:12px;color:#9a9590;margin-bottom:4px;font-weight:600;">付款狀態</label>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
