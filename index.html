@@ -183,7 +183,7 @@ body { background: var(--bg); color: var(--text); font-family: 'PingFang TC','No
 </div>
 
 <!-- LOGIN SCREEN -->
-<div id="loginScreen" style="display:none;position:fixed;inset:0;background:#0f0f0f;z-index:9998;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px;">
+<div id="loginScreen" style="display:none;position:fixed;inset:0;background:#0f0f0f;z-index:9998;flex-direction:column;align-items:center;justify-content:center;padding:32px;">
   <div style="font-size:52px;margin-bottom:16px;">🍕</div>
   <div style="font-size:22px;font-weight:800;margin-bottom:8px;">Papa Vito 進貨系統</div>
   <div style="font-size:14px;color:#9a9590;margin-bottom:32px;">請輸入你的名字來開始</div>
@@ -214,9 +214,10 @@ body { background: var(--bg); color: var(--text); font-family: 'PingFang TC','No
   <div class="record-count-badge" id="headerCount">0</div>
 </div>
 
-<div class="tabs">
+<div class="tabs" style="overflow-x:auto;">
   <div class="tab active" onclick="switchTab('input')">📝 輸入</div>
   <div class="tab" onclick="switchTab('records')">📋 記錄</div>
+  <div class="tab" onclick="switchTab('transfer')">🔄 調撥</div>
   <div class="tab" onclick="switchTab('export')">📤 匯出</div>
   <div class="tab" onclick="switchTab('admin')">⚙️ 管理</div>
 </div>
@@ -460,6 +461,84 @@ body { background: var(--bg); color: var(--text); font-family: 'PingFang TC','No
   <div id="recordsList"></div>
 </div>
 
+<!-- TRANSFER PANEL -->
+<div class="panel" id="panel-transfer">
+  <div class="card">
+    <div class="card-title">🔄 新增調撥記錄</div>
+    <div class="field-row">
+      <div class="field"><label>轉出店</label>
+        <select id="tfFrom" style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px 12px;color:var(--text);font-size:15px;font-family:inherit;width:100%;outline:none;">
+          <option value="">請選擇</option>
+          <option value="1">🏠 天母店</option>
+          <option value="2">🏪 昌吉店</option>
+          <option value="PVK">🍳 PVK（中央廚房）</option>
+        </select>
+      </div>
+      <div class="field"><label>轉入店</label>
+        <select id="tfTo" style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px 12px;color:var(--text);font-size:15px;font-family:inherit;width:100%;outline:none;">
+          <option value="">請選擇</option>
+          <option value="1">🏠 天母店</option>
+          <option value="2">🏪 昌吉店</option>
+          <option value="PVK">🍳 PVK（中央廚房）</option>
+        </select>
+      </div>
+    </div>
+    <div class="field">
+      <label>日期</label>
+      <input type="date" id="tfDate">
+      <div class="date-quick">
+        <div class="dq-btn" onclick="tfSetDate(0)">今天</div>
+        <div class="dq-btn" onclick="tfSetDate(-1)">昨天</div>
+        <div class="dq-btn" onclick="tfSetDate(-2)">前天</div>
+      </div>
+    </div>
+    <div class="field">
+      <label>品項</label>
+      <div class="search-wrap">
+        <span class="search-icon-abs">🔍</span>
+        <input type="text" id="tfSearchInput" placeholder="輸入品項名稱或識別碼" autocomplete="off" oninput="onTfSearch()">
+        <div class="search-results" id="tfSearchResults" style="display:none;"></div>
+      </div>
+    </div>
+    <div class="sel-badge" id="tfSelBadge">
+      <span class="sb-code" id="tfSbCode"></span>
+      <div class="sb-info"><div class="sb-name" id="tfSbName"></div><div class="sb-spec" id="tfSbSpec"></div></div>
+      <span class="sb-clear" onclick="clearTfSelected()">✕</span>
+    </div>
+    <div class="field" style="margin-top:10px;">
+      <label id="tfQtyLabel">數量</label>
+      <input type="number" id="tfQty" placeholder="0" step="0.1" min="0" inputmode="decimal">
+    </div>
+    <div class="field">
+      <label>三聯單流水號 <span style="color:var(--text3);font-weight:400;font-size:11px;">（選填）</span></label>
+      <input type="text" id="tfSerial" placeholder="如 3002" inputmode="numeric">
+    </div>
+    <div class="field">
+      <label>付款狀態</label>
+      <div class="tax-toggle">
+        <div class="tax-btn active" id="tfPaidN" onclick="setTfPaid('未付')">⏳ 未付款</div>
+        <div class="tax-btn" id="tfPaidY" onclick="setTfPaid('已付')">✅ 當場已付</div>
+      </div>
+    </div>
+    <div id="tfAmtWrap" style="display:none;" class="field">
+      <label>付款金額（元）</label>
+      <input type="number" id="tfPaidAmt" placeholder="實際付了多少" step="1" min="0" inputmode="decimal">
+    </div>
+    <button class="btn-primary" style="background:#5ba5e8;margin-top:6px;" onclick="saveTf()">🔄 儲存調撥記錄</button>
+  </div>
+
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+    <span style="font-size:13px;color:var(--text2);" id="tfCount">—</span>
+    <input type="month" id="tfMonth" style="background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:5px 8px;color:var(--text);font-size:12px;font-family:inherit;" onchange="renderTransfers()">
+  </div>
+  <div id="unpaidAlert" style="display:none;background:rgba(245,166,35,0.1);border:1px solid var(--yellow);border-radius:9px;padding:10px 13px;margin-bottom:10px;">
+    <div style="font-size:13px;color:var(--yellow);font-weight:700;">⚠️ 有未付款調撥記錄</div>
+    <div id="unpaidList" style="font-size:11px;color:var(--text2);margin-top:3px;"></div>
+  </div>
+  <div id="tfList"></div>
+  <button class="btn-export" style="margin-top:12px;" onclick="exportTfCSV()">📥 匯出調撥 CSV</button>
+</div>
+
 <!-- EXPORT PANEL -->
 <div class="panel" id="panel-export">
   <div class="stats-grid" id="statsGrid"></div>
@@ -582,7 +661,17 @@ try {
     if (typeof initLogin === 'function') initLogin();
   });
 
-  // 3秒後觸發 login 流程（不管firebase是否回來）
+  // 監聽調撥記錄
+  const q2 = window._query(window._collection(window._db, 'transfers'), window._orderBy('date', 'desc'));
+  window._onSnapshot(q2, (snap) => {
+    window.allTransfers = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    if (document.getElementById('panel-transfer') &&
+        document.getElementById('panel-transfer').classList.contains('active')) {
+      if (typeof renderTransfers === 'function') renderTransfers();
+    }
+  }, (err) => { console.warn('Transfers err:', err); });
+
+  // 1.5秒後觸發 login 流程
   setTimeout(() => {
     if (typeof initLogin === 'function') initLogin();
   }, 1500);
@@ -1345,6 +1434,170 @@ function renderAdminItems() {
 // Load custom items on start
 window.addEventListener('DOMContentLoaded', () => {
   mergeCustomItems();
+});
+
+// ============ TRANSFER ============
+window.allTransfers = [];
+let tfSelItem = null;
+let curTfPaid = '未付';
+let tfSearchTimer = null;
+
+function tfSetDate(offset) {
+  const d = new Date(); d.setDate(d.getDate() + offset);
+  document.getElementById('tfDate').value = d.toISOString().split('T')[0];
+}
+
+function onTfSearch() {
+  clearTimeout(tfSearchTimer);
+  tfSearchTimer = setTimeout(() => {
+    const q = document.getElementById('tfSearchInput').value.trim().toLowerCase();
+    const el = document.getElementById('tfSearchResults');
+    if (!q) { el.style.display = 'none'; return; }
+    const hits = ITEMS.filter(i => i.name.toLowerCase().includes(q) || i.code.toLowerCase().includes(q)).slice(0, 10);
+    if (!hits.length) { el.style.display = 'none'; return; }
+    el.innerHTML = hits.map(i => `<div class="sri" onclick="pickTfItem('${i.code}')">
+      <div class="sri-name">${i.name}</div>
+      <div class="sri-meta"><span class="sri-code">${i.code}</span> · ${i.unit || '—'}</div>
+    </div>`).join('');
+    el.style.display = 'block';
+  }, 150);
+}
+
+function pickTfItem(code) {
+  tfSelItem = ITEMS.find(i => i.code === code);
+  if (!tfSelItem) return;
+  document.getElementById('tfSearchInput').value = tfSelItem.name;
+  document.getElementById('tfSearchResults').style.display = 'none';
+  document.getElementById('tfSbCode').textContent = tfSelItem.code;
+  document.getElementById('tfSbName').textContent = tfSelItem.name;
+  document.getElementById('tfSbSpec').textContent = (tfSelItem.spec || '—') + ' · ' + (tfSelItem.unit || '—');
+  document.getElementById('tfSelBadge').classList.add('on');
+  const WU = ['KG', 'kg', '公斤', '斤'];
+  const lbl = document.getElementById('tfQtyLabel');
+  if (lbl) lbl.textContent = WU.includes(tfSelItem.unit) ? `重量（${tfSelItem.unit}）` : '數量';
+}
+
+function clearTfSelected() {
+  tfSelItem = null;
+  document.getElementById('tfSearchInput').value = '';
+  document.getElementById('tfSelBadge').classList.remove('on');
+}
+
+function setTfPaid(v) {
+  curTfPaid = v;
+  document.getElementById('tfPaidN').classList.toggle('active', v === '未付');
+  document.getElementById('tfPaidY').classList.toggle('active', v === '已付');
+  document.getElementById('tfAmtWrap').style.display = v === '已付' ? 'block' : 'none';
+}
+
+async function saveTf() {
+  const from = document.getElementById('tfFrom').value;
+  const to = document.getElementById('tfTo').value;
+  const date = document.getElementById('tfDate').value;
+  const qty = parseFloat(document.getElementById('tfQty').value);
+  const serial = document.getElementById('tfSerial').value.trim();
+  const paidAmt = curTfPaid === '已付' ? (parseFloat(document.getElementById('tfPaidAmt').value) || 0) : 0;
+
+  if (!from) { toast('❌ 請選擇轉出店', true); return; }
+  if (!to) { toast('❌ 請選擇轉入店', true); return; }
+  if (from === to) { toast('❌ 轉出和轉入不能相同', true); return; }
+  if (!date) { toast('❌ 請選擇日期', true); return; }
+  if (!tfSelItem) { toast('❌ 請選擇品項', true); return; }
+  if (isNaN(qty) || qty <= 0) { toast('❌ 請輸入數量', true); return; }
+  if (curTfPaid === '已付' && paidAmt <= 0) { toast('❌ 請填寫付款金額', true); return; }
+
+  const data = {
+    date: String(date), fromStore: String(from), toStore: String(to),
+    code: String(tfSelItem.code), name: String(tfSelItem.name),
+    spec: String(tfSelItem.spec || ''), unit: String(tfSelItem.unit || ''),
+    qty: Number(qty), price: 0, subtotal: 0,
+    paidAmount: Number(paidAmt), serial: String(serial),
+    paid: String(curTfPaid), operator: String(currentOperator || '未知'),
+    createdAt: window._serverTimestamp()
+  };
+
+  document.getElementById('uploadingOverlay').style.display = 'flex';
+  document.getElementById('uploadingMsg').textContent = '儲存調撥中...';
+  try {
+    await window._addDoc(window._collection(window._db, 'transfers'), data);
+    document.getElementById('uploadingOverlay').style.display = 'none';
+    toast('✅ 調撥記錄已儲存');
+    clearTfSelected();
+    document.getElementById('tfSerial').value = '';
+    document.getElementById('tfQty').value = '';
+    const pa = document.getElementById('tfPaidAmt'); if (pa) pa.value = '';
+    document.getElementById('tfFrom').value = '';
+    document.getElementById('tfTo').value = '';
+    setTfPaid('未付');
+  } catch(e) {
+    document.getElementById('uploadingOverlay').style.display = 'none';
+    toast('❌ 儲存失敗：' + e.message, true);
+  }
+}
+
+function sName(s) { return s==='1'?'🏠天母':s==='2'?'🏪昌吉':s==='PVK'?'🍳PVK':s; }
+
+function renderTransfers() {
+  const month = document.getElementById('tfMonth') ? document.getElementById('tfMonth').value : '';
+  const r = (window.allTransfers || []).filter(x => !month || (x.date && x.date.startsWith(month)));
+  document.getElementById('tfCount').textContent = `${month} · 共 ${r.length} 筆調撥`;
+  const unpaid = r.filter(x => x.paid === '未付');
+  const ua = document.getElementById('unpaidAlert');
+  ua.style.display = unpaid.length ? 'block' : 'none';
+  if (unpaid.length) document.getElementById('unpaidList').textContent =
+    unpaid.map(x => `${x.date} ${sName(x.fromStore)}→${sName(x.toStore)} ${x.name}`).join('、');
+  const el = document.getElementById('tfList');
+  if (!r.length) { el.innerHTML = '<div class="empty-state"><div class="em-icon">🔄</div><p>這個月份沒有調撥記錄</p></div>'; return; }
+  el.innerHTML = r.map(x => `<div class="record-item" style="border-left:3px solid #5ba5e8;">
+    <div class="ri-top">
+      <div class="ri-name">${x.name}</div>
+      <div class="ri-amount" style="color:#5ba5e8;">${x.paid==='已付'?'$'+(x.paidAmount||0).toLocaleString():'未付'}</div>
+    </div>
+    <div class="ri-tags">
+      <span class="ri-tag">${x.date}</span>
+      <span class="ri-tag" style="color:#5ba5e8;font-weight:700;">${sName(x.fromStore)} → ${sName(x.toStore)}</span>
+      <span class="ri-tag">${x.code}</span>
+      <span class="ri-tag">${x.qty} ${x.unit||''}</span>
+      ${x.serial ? `<span class="ri-tag">📋${x.serial}</span>` : ''}
+      <span class="ri-tag" style="color:${x.paid==='已付'?'var(--green)':'var(--yellow)'};">${x.paid==='已付'?'✅已付':'⏳未付'}</span>
+      <span class="ri-tag">👤${x.operator||''}</span>
+      <span class="ri-tag del" onclick="deleteTf('${x.id}')">🗑</span>
+    </div>
+  </div>`).join('');
+}
+
+async function deleteTf(id) {
+  if (!confirm('確定刪除？')) return;
+  try { await window._deleteDoc(window._doc(window._db, 'transfers', id)); toast('已刪除'); }
+  catch(e) { toast('❌ 刪除失敗', true); }
+}
+
+function exportTfCSV() {
+  const month = document.getElementById('tfMonth').value;
+  const r = (window.allTransfers || []).filter(x => x.date && x.date.startsWith(month)).reverse();
+  if (!r.length) { toast('❌ 沒有資料', true); return; }
+  const hdr = '調撥日期/時間,轉出店,識別碼,品項,規格,單位,單價（未稅）,數量,轉入店,流水號,價格（未稅）,付款完成?,實付金額';
+  const rows = r.map(x => [
+    x.date+' 0:00', x.fromStore, x.code, x.name, x.spec||'', x.unit||'',
+    '', x.qty, x.toStore, x.serial||'', '', x.paid==='已付'?'Y':'N', x.paidAmount||0
+  ].map(v => '"'+String(v||'').replace(/"/g,'""')+'"').join(','));
+  const csv = '﻿' + hdr + '
+' + rows.join('
+');
+  const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href=url; a.download='PapaVito_調撥_'+month+'.csv';
+  a.click(); URL.revokeObjectURL(url);
+  toast('✅ 調撥 CSV 下載完成！');
+}
+
+// init tf date on load
+window.addEventListener('DOMContentLoaded', () => {
+  const d = new Date();
+  const tfD = document.getElementById('tfDate');
+  if (tfD) tfD.value = d.toISOString().split('T')[0];
+  const tfM = document.getElementById('tfMonth');
+  if (tfM) tfM.value = d.toISOString().slice(0,7);
 });
 
 // ============ LOGIN ============
