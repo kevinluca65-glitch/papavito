@@ -200,6 +200,34 @@ body { background: var(--bg); color: var(--text); font-family: 'PingFang TC','No
   </div>
 </div>
 
+<!-- HOME SCREEN -->
+<div id="homeScreen" style="display:none;position:fixed;inset:0;background:#0f0f0f;z-index:9997;flex-direction:column;align-items:center;justify-content:center;padding:28px;">
+  <div style="font-size:48px;margin-bottom:10px;">🍕</div>
+  <div style="font-size:20px;font-weight:800;margin-bottom:4px;">Papa Vito</div>
+  <div id="homeGreet" style="font-size:13px;color:#9a9590;margin-bottom:36px;"></div>
+  <div style="width:100%;max-width:320px;display:flex;flex-direction:column;gap:14px;">
+    <button onclick="enterApp('input')"
+      style="background:#e8502a;color:white;border:none;border-radius:14px;padding:20px;font-size:17px;font-weight:800;font-family:inherit;cursor:pointer;display:flex;align-items:center;gap:14px;">
+      <span style="font-size:32px;">📦</span>
+      <div style="text-align:left;">
+        <div>進貨系統</div>
+        <div style="font-size:12px;font-weight:400;opacity:0.8;margin-top:2px;">記錄進貨、查看記錄、匯出CSV</div>
+      </div>
+    </button>
+    <button onclick="enterApp('transfer')"
+      style="background:#1a1a1a;color:white;border:2px solid #5ba5e8;border-radius:14px;padding:20px;font-size:17px;font-weight:800;font-family:inherit;cursor:pointer;display:flex;align-items:center;gap:14px;">
+      <span style="font-size:32px;">🔄</span>
+      <div style="text-align:left;">
+        <div style="color:#5ba5e8;">調撥系統</div>
+        <div style="font-size:12px;font-weight:400;color:#9a9590;margin-top:2px;">天母、昌吉、PVK 之間調貨</div>
+      </div>
+    </button>
+  </div>
+  <div style="margin-top:28px;font-size:12px;color:#5a5550;cursor:pointer;" onclick="logout()">
+    👤 <span id="homeOp"></span>　·　登出
+  </div>
+</div>
+
 <!-- MAIN APP -->
 <div id="app" style="display:none;">
 
@@ -214,10 +242,9 @@ body { background: var(--bg); color: var(--text); font-family: 'PingFang TC','No
   <div class="record-count-badge" id="headerCount">0</div>
 </div>
 
-<div class="tabs" style="overflow-x:auto;">
+<div class="tabs">
   <div class="tab active" onclick="switchTab('input')">📝 輸入</div>
   <div class="tab" onclick="switchTab('records')">📋 記錄</div>
-  <div class="tab" onclick="switchTab('transfer')">🔄 調撥</div>
   <div class="tab" onclick="switchTab('export')">📤 匯出</div>
   <div class="tab" onclick="switchTab('admin')">⚙️ 管理</div>
 </div>
@@ -461,84 +488,6 @@ body { background: var(--bg); color: var(--text); font-family: 'PingFang TC','No
   <div id="recordsList"></div>
 </div>
 
-<!-- TRANSFER PANEL -->
-<div class="panel" id="panel-transfer">
-  <div class="card">
-    <div class="card-title">🔄 新增調撥記錄</div>
-    <div class="field-row">
-      <div class="field"><label>轉出店</label>
-        <select id="tfFrom" style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px 12px;color:var(--text);font-size:15px;font-family:inherit;width:100%;outline:none;">
-          <option value="">請選擇</option>
-          <option value="1">🏠 天母店</option>
-          <option value="2">🏪 昌吉店</option>
-          <option value="PVK">🍳 PVK（中央廚房）</option>
-        </select>
-      </div>
-      <div class="field"><label>轉入店</label>
-        <select id="tfTo" style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px 12px;color:var(--text);font-size:15px;font-family:inherit;width:100%;outline:none;">
-          <option value="">請選擇</option>
-          <option value="1">🏠 天母店</option>
-          <option value="2">🏪 昌吉店</option>
-          <option value="PVK">🍳 PVK（中央廚房）</option>
-        </select>
-      </div>
-    </div>
-    <div class="field">
-      <label>日期</label>
-      <input type="date" id="tfDate">
-      <div class="date-quick">
-        <div class="dq-btn" onclick="tfSetDate(0)">今天</div>
-        <div class="dq-btn" onclick="tfSetDate(-1)">昨天</div>
-        <div class="dq-btn" onclick="tfSetDate(-2)">前天</div>
-      </div>
-    </div>
-    <div class="field">
-      <label>品項</label>
-      <div class="search-wrap">
-        <span class="search-icon-abs">🔍</span>
-        <input type="text" id="tfSearchInput" placeholder="輸入品項名稱或識別碼" autocomplete="off" oninput="onTfSearch()">
-        <div class="search-results" id="tfSearchResults" style="display:none;"></div>
-      </div>
-    </div>
-    <div class="sel-badge" id="tfSelBadge">
-      <span class="sb-code" id="tfSbCode"></span>
-      <div class="sb-info"><div class="sb-name" id="tfSbName"></div><div class="sb-spec" id="tfSbSpec"></div></div>
-      <span class="sb-clear" onclick="clearTfSelected()">✕</span>
-    </div>
-    <div class="field" style="margin-top:10px;">
-      <label id="tfQtyLabel">數量</label>
-      <input type="number" id="tfQty" placeholder="0" step="0.1" min="0" inputmode="decimal">
-    </div>
-    <div class="field">
-      <label>三聯單流水號 <span style="color:var(--text3);font-weight:400;font-size:11px;">（選填）</span></label>
-      <input type="text" id="tfSerial" placeholder="如 3002" inputmode="numeric">
-    </div>
-    <div class="field">
-      <label>付款狀態</label>
-      <div class="tax-toggle">
-        <div class="tax-btn active" id="tfPaidN" onclick="setTfPaid('未付')">⏳ 未付款</div>
-        <div class="tax-btn" id="tfPaidY" onclick="setTfPaid('已付')">✅ 當場已付</div>
-      </div>
-    </div>
-    <div id="tfAmtWrap" style="display:none;" class="field">
-      <label>付款金額（元）</label>
-      <input type="number" id="tfPaidAmt" placeholder="實際付了多少" step="1" min="0" inputmode="decimal">
-    </div>
-    <button class="btn-primary" style="background:#5ba5e8;margin-top:6px;" onclick="saveTf()">🔄 儲存調撥記錄</button>
-  </div>
-
-  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
-    <span style="font-size:13px;color:var(--text2);" id="tfCount">—</span>
-    <input type="month" id="tfMonth" style="background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:5px 8px;color:var(--text);font-size:12px;font-family:inherit;" onchange="renderTransfers()">
-  </div>
-  <div id="unpaidAlert" style="display:none;background:rgba(245,166,35,0.1);border:1px solid var(--yellow);border-radius:9px;padding:10px 13px;margin-bottom:10px;">
-    <div style="font-size:13px;color:var(--yellow);font-weight:700;">⚠️ 有未付款調撥記錄</div>
-    <div id="unpaidList" style="font-size:11px;color:var(--text2);margin-top:3px;"></div>
-  </div>
-  <div id="tfList"></div>
-  <button class="btn-export" style="margin-top:12px;" onclick="exportTfCSV()">📥 匯出調撥 CSV</button>
-</div>
-
 <!-- EXPORT PANEL -->
 <div class="panel" id="panel-export">
   <div class="stats-grid" id="statsGrid"></div>
@@ -601,6 +550,96 @@ body { background: var(--bg); color: var(--text); font-family: 'PingFang TC','No
 
 </div><!-- /app -->
 
+<!-- TRANSFER APP（獨立） -->
+<div id="transferApp" style="display:none;">
+  <div class="header">
+    <div class="logo" style="background:#5ba5e8;">🔄</div>
+    <div class="header-title">
+      <h1>調撥系統</h1>
+      <p id="tfSyncStatus">連線中...</p>
+    </div>
+    <div class="sync-dot syncing" id="tfSyncDot"></div>
+    <button onclick="goHome()" style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:6px 12px;color:var(--text2);font-size:12px;font-family:inherit;cursor:pointer;">← 返回</button>
+  </div>
+
+  <div class="panel active" style="padding:14px;">
+    <div class="card">
+      <div class="card-title">🔄 新增調撥記錄</div>
+      <div class="field-row">
+        <div class="field"><label>轉出店</label>
+          <select id="tfFrom" style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px 12px;color:var(--text);font-size:15px;font-family:inherit;width:100%;outline:none;">
+            <option value="">請選擇</option>
+            <option value="1">🏠 天母店</option>
+            <option value="2">🏪 昌吉店</option>
+            <option value="PVK">🍳 PVK</option>
+          </select>
+        </div>
+        <div class="field"><label>轉入店</label>
+          <select id="tfTo" style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px 12px;color:var(--text);font-size:15px;font-family:inherit;width:100%;outline:none;">
+            <option value="">請選擇</option>
+            <option value="1">🏠 天母店</option>
+            <option value="2">🏪 昌吉店</option>
+            <option value="PVK">🍳 PVK</option>
+          </select>
+        </div>
+      </div>
+      <div class="field">
+        <label>日期</label>
+        <input type="date" id="tfDate">
+        <div class="date-quick">
+          <div class="dq-btn" onclick="tfSetDate(0)">今天</div>
+          <div class="dq-btn" onclick="tfSetDate(-1)">昨天</div>
+          <div class="dq-btn" onclick="tfSetDate(-2)">前天</div>
+        </div>
+      </div>
+      <div class="field">
+        <label>品項</label>
+        <div class="search-wrap">
+          <span class="search-icon-abs">🔍</span>
+          <input type="text" id="tfSearchInput" placeholder="輸入品項名稱或識別碼" autocomplete="off" oninput="onTfSearch()">
+          <div class="search-results" id="tfSearchResults" style="display:none;"></div>
+        </div>
+      </div>
+      <div class="sel-badge" id="tfSelBadge">
+        <span class="sb-code" id="tfSbCode"></span>
+        <div class="sb-info"><div class="sb-name" id="tfSbName"></div><div class="sb-spec" id="tfSbSpec"></div></div>
+        <span class="sb-clear" onclick="clearTfSelected()">✕</span>
+      </div>
+      <div class="field" style="margin-top:10px;">
+        <label id="tfQtyLabel">數量</label>
+        <input type="number" id="tfQty" placeholder="0" step="0.1" min="0" inputmode="decimal">
+      </div>
+      <div class="field">
+        <label>三聯單流水號 <span style="color:var(--text3);font-weight:400;font-size:11px;">（選填）</span></label>
+        <input type="text" id="tfSerial" placeholder="如 3002">
+      </div>
+      <div class="field">
+        <label>付款狀態</label>
+        <div class="tax-toggle">
+          <div class="tax-btn active" id="tfPaidN" onclick="setTfPaid('未付')">⏳ 未付款</div>
+          <div class="tax-btn" id="tfPaidY" onclick="setTfPaid('已付')">✅ 當場已付</div>
+        </div>
+      </div>
+      <div id="tfAmtWrap" style="display:none;" class="field">
+        <label>付款金額（元）</label>
+        <input type="number" id="tfPaidAmt" placeholder="實際付了多少" step="1" min="0" inputmode="decimal">
+      </div>
+      <button class="btn-primary" style="background:#5ba5e8;margin-top:6px;" onclick="saveTf()">🔄 儲存調撥記錄</button>
+    </div>
+
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+      <span style="font-size:13px;color:var(--text2);" id="tfCount">—</span>
+      <input type="month" id="tfMonth" style="background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:5px 8px;color:var(--text);font-size:12px;font-family:inherit;" onchange="renderTransfers()">
+    </div>
+    <div id="unpaidAlert" style="display:none;background:rgba(245,166,35,0.1);border:1px solid var(--yellow);border-radius:9px;padding:10px 13px;margin-bottom:10px;">
+      <div style="font-size:13px;color:var(--yellow);font-weight:700;">⚠️ 有未付款調撥記錄</div>
+      <div id="unpaidList" style="font-size:11px;color:var(--text2);margin-top:3px;"></div>
+    </div>
+    <div id="tfList"></div>
+    <button class="btn-export" style="margin-top:12px;" onclick="exportTfCSV()">📥 匯出調撥 CSV</button>
+  </div>
+</div>
+
 <!-- PHOTO VIEWER -->
 <div class="photo-viewer" id="photoViewer" style="display:none;" onclick="closePhotoViewer()">
   <img id="viewerImg" src="">
@@ -661,17 +700,7 @@ try {
     if (typeof initLogin === 'function') initLogin();
   });
 
-  // 監聽調撥記錄
-  const q2 = window._query(window._collection(window._db, 'transfers'), window._orderBy('date', 'desc'));
-  window._onSnapshot(q2, (snap) => {
-    window.allTransfers = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-    if (document.getElementById('panel-transfer') &&
-        document.getElementById('panel-transfer').classList.contains('active')) {
-      if (typeof renderTransfers === 'function') renderTransfers();
-    }
-  }, (err) => { console.warn('Transfers err:', err); });
-
-  // 1.5秒後觸發 login 流程
+  // 3秒後觸發 login 流程（不管firebase是否回來）
   setTimeout(() => {
     if (typeof initLogin === 'function') initLogin();
   }, 1500);
@@ -1437,10 +1466,29 @@ window.addEventListener('DOMContentLoaded', () => {
 });
 
 // ============ TRANSFER ============
-window.allTransfers = [];
 let tfSelItem = null;
 let curTfPaid = '未付';
 let tfSearchTimer = null;
+let tfListenerStarted = false;
+window.allTransfers = [];
+
+function initTfListener() {
+  if (tfListenerStarted) return;
+  tfListenerStarted = true;
+  try {
+    const q = window._query(window._collection(window._db, 'transfers'), window._orderBy('date', 'desc'));
+    window._onSnapshot(q, (snap) => {
+      window.allTransfers = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      document.getElementById('tfSyncStatus').textContent = '雲端同步 ✓';
+      document.getElementById('tfSyncDot').className = 'sync-dot online';
+      renderTransfers();
+    }, (err) => {
+      console.warn('TF listener err:', err);
+      document.getElementById('tfSyncStatus').textContent = '同步錯誤';
+      document.getElementById('tfSyncDot').className = 'sync-dot offline';
+    });
+  } catch(e) { console.warn('TF init err:', e); }
+}
 
 function tfSetDate(offset) {
   const d = new Date(); d.setDate(d.getDate() + offset);
@@ -1472,7 +1520,7 @@ function pickTfItem(code) {
   document.getElementById('tfSbName').textContent = tfSelItem.name;
   document.getElementById('tfSbSpec').textContent = (tfSelItem.spec || '—') + ' · ' + (tfSelItem.unit || '—');
   document.getElementById('tfSelBadge').classList.add('on');
-  const WU = ['KG', 'kg', '公斤', '斤'];
+  const WU = ['KG','kg','公斤','斤'];
   const lbl = document.getElementById('tfQtyLabel');
   if (lbl) lbl.textContent = WU.includes(tfSelItem.unit) ? `重量（${tfSelItem.unit}）` : '數量';
 }
@@ -1510,9 +1558,9 @@ async function saveTf() {
     date: String(date), fromStore: String(from), toStore: String(to),
     code: String(tfSelItem.code), name: String(tfSelItem.name),
     spec: String(tfSelItem.spec || ''), unit: String(tfSelItem.unit || ''),
-    qty: Number(qty), price: 0, subtotal: 0,
-    paidAmount: Number(paidAmt), serial: String(serial),
-    paid: String(curTfPaid), operator: String(currentOperator || '未知'),
+    qty: Number(qty), paidAmount: Number(paidAmt),
+    serial: String(serial), paid: String(curTfPaid),
+    operator: String(currentOperator || '未知'),
     createdAt: window._serverTimestamp()
   };
 
@@ -1523,9 +1571,7 @@ async function saveTf() {
     document.getElementById('uploadingOverlay').style.display = 'none';
     toast('✅ 調撥記錄已儲存');
     clearTfSelected();
-    document.getElementById('tfSerial').value = '';
-    document.getElementById('tfQty').value = '';
-    const pa = document.getElementById('tfPaidAmt'); if (pa) pa.value = '';
+    ['tfSerial','tfQty','tfPaidAmt'].forEach(id => { const el=document.getElementById(id); if(el) el.value=''; });
     document.getElementById('tfFrom').value = '';
     document.getElementById('tfTo').value = '';
     setTfPaid('未付');
@@ -1538,15 +1584,20 @@ async function saveTf() {
 function sName(s) { return s==='1'?'🏠天母':s==='2'?'🏪昌吉':s==='PVK'?'🍳PVK':s; }
 
 function renderTransfers() {
-  const month = document.getElementById('tfMonth') ? document.getElementById('tfMonth').value : '';
+  const tfM = document.getElementById('tfMonth');
+  const month = tfM ? tfM.value : '';
   const r = (window.allTransfers || []).filter(x => !month || (x.date && x.date.startsWith(month)));
-  document.getElementById('tfCount').textContent = `${month} · 共 ${r.length} 筆調撥`;
+  const countEl = document.getElementById('tfCount');
+  if (countEl) countEl.textContent = `${month} · 共 ${r.length} 筆調撥`;
   const unpaid = r.filter(x => x.paid === '未付');
   const ua = document.getElementById('unpaidAlert');
-  ua.style.display = unpaid.length ? 'block' : 'none';
-  if (unpaid.length) document.getElementById('unpaidList').textContent =
-    unpaid.map(x => `${x.date} ${sName(x.fromStore)}→${sName(x.toStore)} ${x.name}`).join('、');
+  if (ua) {
+    ua.style.display = unpaid.length ? 'block' : 'none';
+    if (unpaid.length) document.getElementById('unpaidList').textContent =
+      unpaid.map(x => `${x.date} ${sName(x.fromStore)}→${sName(x.toStore)} ${x.name}`).join('、');
+  }
   const el = document.getElementById('tfList');
+  if (!el) return;
   if (!r.length) { el.innerHTML = '<div class="empty-state"><div class="em-icon">🔄</div><p>這個月份沒有調撥記錄</p></div>'; return; }
   el.innerHTML = r.map(x => `<div class="record-item" style="border-left:3px solid #5ba5e8;">
     <div class="ri-top">
@@ -1561,7 +1612,7 @@ function renderTransfers() {
       ${x.serial ? `<span class="ri-tag">📋${x.serial}</span>` : ''}
       <span class="ri-tag" style="color:${x.paid==='已付'?'var(--green)':'var(--yellow)'};">${x.paid==='已付'?'✅已付':'⏳未付'}</span>
       <span class="ri-tag">👤${x.operator||''}</span>
-      <span class="ri-tag del" onclick="deleteTf('${x.id}')">🗑</span>
+      <span class="ri-tag del" onclick="deleteTf('${x.id}')">🗑 刪除</span>
     </div>
   </div>`).join('');
 }
@@ -1591,15 +1642,6 @@ function exportTfCSV() {
   toast('✅ 調撥 CSV 下載完成！');
 }
 
-// init tf date on load
-window.addEventListener('DOMContentLoaded', () => {
-  const d = new Date();
-  const tfD = document.getElementById('tfDate');
-  if (tfD) tfD.value = d.toISOString().split('T')[0];
-  const tfM = document.getElementById('tfMonth');
-  if (tfM) tfM.value = d.toISOString().slice(0,7);
-});
-
 // ============ LOGIN ============
 let currentOperator = '';
 function initLogin() {
@@ -1625,8 +1667,45 @@ function doLogin() {
 }
 function showApp() {
   document.getElementById('loadingScreen').style.display = 'none';
-  document.getElementById('app').style.display = 'block';
-  document.getElementById('operatorBadge').textContent = '👤 ' + currentOperator;
+  document.getElementById('loginScreen').style.display = 'none';
+  // 顯示首頁讓員工選擇
+  document.getElementById('homeScreen').style.display = 'flex';
+  document.getElementById('homeGreet').textContent = '歡迎回來，' + currentOperator + '！';
+  document.getElementById('homeOp').textContent = currentOperator;
+}
+
+function enterApp(section) {
+  document.getElementById('homeScreen').style.display = 'none';
+  if (section === 'transfer') {
+    document.getElementById('transferApp').style.display = 'block';
+    // 初始化調撥日期
+    const d = new Date();
+    document.getElementById('tfDate').value = d.toISOString().split('T')[0];
+    document.getElementById('tfMonth').value = d.toISOString().slice(0,7);
+    // 連線調撥資料庫（lazy load，只在需要時才連）
+    initTfListener();
+    renderTransfers();
+  } else {
+    document.getElementById('app').style.display = 'block';
+    document.getElementById('operatorBadge').textContent = '👤 ' + currentOperator;
+    if (section) switchTab(section);
+  }
+}
+
+function goHome() {
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('transferApp').style.display = 'none';
+  document.getElementById('homeScreen').style.display = 'flex';
+}
+
+function logout() {
+  if (!confirm('確定要登出嗎？')) return;
+  localStorage.removeItem('pv_operator');
+  currentOperator = '';
+  document.getElementById('homeScreen').style.display = 'none';
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('transferApp').style.display = 'none';
+  document.getElementById('loginScreen').style.display = 'flex';
 }
 // Run login check on load
 window.addEventListener('DOMContentLoaded', initLogin);
