@@ -699,11 +699,9 @@ try {
   window._onSnapshot = onSnapshot;
   window._serverTimestamp = serverTimestamp;
 
-  // ── 立刻先隱藏 loading、觸發 login ──
-  // 不等 Firebase 回來，讓使用者先進 App，背景再同步
+  // ── Firebase 準備好了，觸發 login 流程 ──
+  // 讓 login 自己處理要顯示 loginScreen 還是 app
   setTimeout(() => {
-    document.getElementById('loadingScreen').style.display = 'none';
-    document.getElementById('app').style.display = 'block';
     doInitLogin();
   }, 800);
 
@@ -737,9 +735,6 @@ try {
 
 } catch(e) {
   console.error('Firebase init error:', e);
-  // 即使 Firebase 失敗也讓使用者進 App
-  document.getElementById('loadingScreen').style.display = 'none';
-  document.getElementById('app').style.display = 'block';
   document.getElementById('headerSub').textContent = '離線模式';
   document.getElementById('syncDot').className = 'sync-dot offline';
   doInitLogin();
@@ -1738,12 +1733,17 @@ function exportTransferCSV() {
 // ============ LOGIN ============
 let currentOperator = '';
 function initLogin() {
+  // 先確保 loadingScreen 隱藏
+  document.getElementById('loadingScreen').style.display = 'none';
+  document.getElementById('loginScreen').style.display = 'none';
+  document.getElementById('app').style.display = 'none';
+
   const saved = localStorage.getItem('pv_operator');
   if (saved && saved.trim()) {
     currentOperator = saved.trim();
     showApp();
   } else {
-    document.getElementById('loadingScreen').style.display = 'none';
+    // 顯示登入畫面
     document.getElementById('loginScreen').style.display = 'flex';
   }
 }
@@ -1751,20 +1751,24 @@ function doLogin() {
   const name = document.getElementById('loginNameInput').value.trim();
   if (!name) {
     document.getElementById('loginNameInput').style.borderColor = '#e05050';
+    setTimeout(() => document.getElementById('loginNameInput').style.borderColor = '#2e2e2e', 1500);
     return;
   }
   currentOperator = name;
   localStorage.setItem('pv_operator', name);
   document.getElementById('loginScreen').style.display = 'none';
+  document.getElementById('loadingScreen').style.display = 'none';
   showApp();
 }
 function showApp() {
   document.getElementById('loadingScreen').style.display = 'none';
+  document.getElementById('loginScreen').style.display = 'none';
   document.getElementById('app').style.display = 'block';
-  document.getElementById('operatorBadge').textContent = '👤 ' + currentOperator;
+  const badge = document.getElementById('operatorBadge');
+  if (badge) badge.textContent = '👤 ' + currentOperator;
 }
-// Run login check on load
-window.addEventListener('DOMContentLoaded', initLogin);
+// initLogin 由 Firebase module 的 setTimeout 觸發
+// 這裡不需要再呼叫，避免重複執行
 </script>
 </body>
 </html>
