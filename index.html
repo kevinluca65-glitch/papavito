@@ -1451,7 +1451,7 @@ function onTfSearch() {
     var hits = ITEMS.filter(function(i){ return i.name.toLowerCase().includes(q) || i.code.toLowerCase().includes(q); }).slice(0,10);
     if (!hits.length) { el.style.display = 'none'; return; }
     el.innerHTML = hits.map(function(i){
-      return '<div onclick="pickTfItem('' + i.code + '')" style="padding:10px 12px;cursor:pointer;border-bottom:1px solid #2e2e2e;">' +
+      return '<div onclick="pickTfItem(\'' + i.code + '\')" style="padding:10px 12px;cursor:pointer;border-bottom:1px solid #2e2e2e;">' +
         '<div style="font-size:14px;font-weight:600;color:#f0ede8;">' + i.name + '</div>' +
         '<div style="font-size:11px;color:#9a9590;margin-top:2px;"><span style="color:#e8502a;font-weight:700;">' + i.code + '</span> · ' + (i.unit||'—') + '</div>' +
         '</div>';
@@ -1559,7 +1559,7 @@ function renderTf() {
       (x.serial?'<span style="background:#242424;border-radius:4px;padding:2px 7px;font-size:11px;color:#9a9590;">📋'+x.serial+'</span>':'') +
       '<span style="background:#242424;border-radius:4px;padding:2px 7px;font-size:11px;color:' + (x.paid==='已付'?'#4caf72':'#f5a623') + ';">' + (x.paid==='已付'?'✅已付':'⏳未付') + '</span>' +
       '<span style="background:#242424;border-radius:4px;padding:2px 7px;font-size:11px;color:#9a9590;">👤' + (x.operator||'') + '</span>' +
-      '<span onclick="deleteTf('' + x.id + '')" style="background:#2a1515;border-radius:4px;padding:2px 7px;font-size:11px;color:#e05050;cursor:pointer;">🗑</span>' +
+      '<span onclick="deleteTf(\'' + x.id + '\')" style="background:#2a1515;border-radius:4px;padding:2px 7px;font-size:11px;color:#e05050;cursor:pointer;">🗑</span>' +
       '</div></div>';
   }).join('');
 }
@@ -1579,9 +1579,7 @@ function exportTfCSV() {
     return [x.date+' 0:00',x.fromStore,x.code,x.name,x.spec||'',x.unit||'','',x.qty,x.toStore,x.serial||'','',x.paid==='已付'?'Y':'N',x.paidAmount||0]
       .map(function(v){ return '"'+String(v||'').replace(/"/g,'""')+'"'; }).join(',');
   });
-  var csv = '﻿'+hdr+'
-'+rows.join('
-');
+  var csv = '\uFEFF' + hdr + '\n' + rows.join('\n');
   var blob = new Blob([csv],{type:'text/csv;charset=utf-8;'});
   var url = URL.createObjectURL(blob);
   var a = document.createElement('a'); a.href=url; a.download='PapaVito_調撥_'+month+'.csv';
