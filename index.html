@@ -676,6 +676,15 @@ const firebaseConfig = {
   appId: "1:669907795934:web:fefc7087a829f20cb8674f"
 };
 
+function doInitLogin() {
+  if (typeof initLogin === 'function') {
+    initLogin();
+  } else {
+    // initLogin 還沒定義，等 DOMContentLoaded
+    window.addEventListener('DOMContentLoaded', () => initLogin());
+  }
+}
+
 try {
   const fbApp = initializeApp(firebaseConfig);
   const db = getFirestore(fbApp);
@@ -690,44 +699,50 @@ try {
   window._onSnapshot = onSnapshot;
   window._serverTimestamp = serverTimestamp;
 
-  // 直接在這裡啟動監聽，不依賴外部函數
+  // ── 立刻先隱藏 loading、觸發 login ──
+  // 不等 Firebase 回來，讓使用者先進 App，背景再同步
+  setTimeout(() => {
+    document.getElementById('loadingScreen').style.display = 'none';
+    document.getElementById('app').style.display = 'block';
+    doInitLogin();
+  }, 800);
+
+  // ── 監聽進貨記錄（背景） ──
   const q = query(collection(db, 'entries'), orderBy('date', 'desc'));
   onSnapshot(q, (snap) => {
     window.allRecords = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-    // Update sync status (login/loading already handled separately)
     document.getElementById('headerSub').textContent = '雲端同步 ✓';
     document.getElementById('syncDot').className = 'sync-dot online';
-    // 更新 UI
     if (typeof updateHeaderCount === 'function') updateHeaderCount();
     if (typeof renderRecords === 'function') renderRecords();
     if (typeof updateStats === 'function') updateStats();
   }, (err) => {
-    console.error('Firestore error:', err);
+    console.error('Firestore entries error:', err);
     document.getElementById('headerSub').textContent = '同步錯誤：' + err.code;
     document.getElementById('syncDot').className = 'sync-dot offline';
-    if (typeof initLogin === 'function') initLogin();
   });
 
-  // 監聽調撥記錄
+  // ── 監聽調撥記錄（背景） ──
   const q2 = query(collection(db, 'transfers'), orderBy('date', 'desc'));
   onSnapshot(q2, (snap) => {
     window.allTransfers = snap.docs.map(d => ({ id: d.id, ...d.data() }));
     if (typeof renderTransfers === 'function' &&
+        document.getElementById('panel-transfer') &&
         document.getElementById('panel-transfer').classList.contains('active')) {
       renderTransfers();
     }
-  }, (err) => { console.warn('Transfers listener error:', err); });
-
-  // 3秒後觸發 login 流程
-  setTimeout(() => {
-    if (typeof initLogin === 'function') initLogin();
-  }, 1500);
+  }, (err) => {
+    console.warn('Transfers listener error:', err);
+  });
 
 } catch(e) {
   console.error('Firebase init error:', e);
-  document.getElementById('headerSub').textContent = '初始化失敗：' + e.message;
+  // 即使 Firebase 失敗也讓使用者進 App
+  document.getElementById('loadingScreen').style.display = 'none';
+  document.getElementById('app').style.display = 'block';
+  document.getElementById('headerSub').textContent = '離線模式';
   document.getElementById('syncDot').className = 'sync-dot offline';
-  setTimeout(() => { if (typeof initLogin === 'function') initLogin(); }, 500);
+  doInitLogin();
 }
 </script>
 
