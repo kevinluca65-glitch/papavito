@@ -460,6 +460,7 @@ body { background: var(--bg); color: var(--text); font-family: 'PingFang TC','No
         style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:9px 12px;color:var(--text);font-size:14px;font-family:inherit;outline:none;"
         oninput="renderRecords()">
     </div>
+    </div><!-- /filterBody -->
   </div>
 
   <!-- 合計小計 -->
@@ -951,6 +952,18 @@ async function saveEntry() {
   }
 }
 
+
+// ============ FILTER TOGGLE ============
+let filterOpen = true;
+function toggleFilter() {
+  filterOpen = !filterOpen;
+  const body = document.getElementById('filterBody');
+  const icon = document.getElementById('filterToggleIcon');
+  const hint = document.getElementById('filterToggleHint');
+  if (body) body.style.display = filterOpen ? 'block' : 'none';
+  if (icon) icon.textContent = filterOpen ? '▲' : '▼';
+  if (hint) hint.textContent = filterOpen ? '點擊收合' : '點擊展開';
+}
 
 // ============ SORT ============
 let currentSort = 'date';
@@ -1459,6 +1472,54 @@ function doLogout() {
 // Run login check on load
 window.addEventListener('DOMContentLoaded', initLogin);
 
+// ── ADMIN AUTH ───────────────────────────────────────────────
+const ADMIN_PW = 'Papavito2015';
+let adminAuthed = false;
+let pendingExportAction = null;
+
+function checkAdminAuth(callback) {
+  if (adminAuthed) { if(callback) callback(); return; }
+  pendingExportAction = callback || null;
+  document.getElementById('adminOverlay').style.display = 'flex';
+  setTimeout(() => { const el = document.getElementById('adminPwInput'); if(el) el.focus(); }, 100);
+}
+
+function checkExportAuth(action) {
+  pendingExportAction = action || 'download';
+  checkAdminAuth(function() {
+    if (pendingExportAction === 'copy') copyCSV();
+    else if (pendingExportAction === 'tf') exportTfCSV();
+    else exportCSV();
+  });
+}
+
+function verifyAdminPw() {
+  const pw = document.getElementById('adminPwInput').value;
+  if (pw === ADMIN_PW) {
+    adminAuthed = true;
+    document.getElementById('adminOverlay').style.display = 'none';
+    document.getElementById('adminPwInput').value = '';
+    toast('✅ 驗證成功');
+    if (pendingExportAction !== null) {
+      if (pendingExportAction === 'copy') copyCSV();
+      else if (pendingExportAction === 'tf') exportTfCSV();
+      else exportCSV();
+      pendingExportAction = null;
+    }
+  } else {
+    document.getElementById('adminPwInput').value = '';
+    document.getElementById('adminPwInput').style.borderColor = '#e05050';
+    setTimeout(() => { document.getElementById('adminPwInput').style.borderColor = '#2e2e2e'; }, 1500);
+    toast('❌ 密碼錯誤', true);
+  }
+}
+
+function closeAdminOverlay() {
+  document.getElementById('adminOverlay').style.display = 'none';
+  document.getElementById('adminPwInput').value = '';
+  pendingExportAction = null;
+}
+
 // ── TRANSFER ─────────────────────────────────────────────────
 var allTransfers = [];
 var tfSelItem = null;
@@ -1617,7 +1678,7 @@ async function deleteTf(id) {
   catch(e) { toast('❌ 刪除失敗', true); }
 }
 
-function exportTfCSV() {
+function exportTfCSV(skipAuth) {
   var month = document.getElementById('tfMonth').value;
   var r = allTransfers.filter(function(x){ return x.date&&x.date.startsWith(month); }).reverse();
   if (!r.length) { toast('❌ 沒有資料', true); return; }
@@ -1635,6 +1696,20 @@ function exportTfCSV() {
 }
 
 </script>
+
+<!-- ADMIN PASSWORD OVERLAY -->
+<div id="adminOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:9999;flex-direction:column;align-items:center;justify-content:center;padding:32px;">
+  <div style="background:#1a1a1a;border:1px solid #2e2e2e;border-radius:16px;padding:28px;width:100%;max-width:300px;text-align:center;">
+    <div style="font-size:36px;margin-bottom:12px;">🔐</div>
+    <div style="font-size:17px;font-weight:700;color:#f0ede8;margin-bottom:6px;">管理員驗證</div>
+    <div style="font-size:13px;color:#9a9590;margin-bottom:20px;">請輸入管理員密碼</div>
+    <input type="password" id="adminPwInput" placeholder="輸入密碼"
+      onkeydown="if(event.key==='Enter')verifyAdminPw()"
+      style="width:100%;background:#0f0f0f;border:2px solid #2e2e2e;border-radius:10px;padding:12px 16px;color:#f0ede8;font-size:16px;font-family:inherit;outline:none;text-align:center;margin-bottom:12px;">
+    <button onclick="verifyAdminPw()" style="width:100%;background:#e8502a;color:white;border:none;border-radius:10px;padding:12px;font-size:15px;font-weight:700;font-family:inherit;cursor:pointer;margin-bottom:8px;">確認</button>
+    <button onclick="closeAdminOverlay()" style="width:100%;background:transparent;border:none;color:#9a9590;font-size:13px;font-family:inherit;cursor:pointer;padding:8px;">取消</button>
+  </div>
+</div>
 
 <div id="homeScreen" style="display:none;position:fixed;inset:0;background:#0f0f0f;z-index:9990;flex-direction:column;align-items:center;justify-content:center;padding:28px;">
   <div style="font-size:48px;margin-bottom:10px;">🍕</div>
@@ -1723,7 +1798,9 @@ function exportTfCSV() {
       <div id="tfUnpaidList" style="font-size:11px;color:#9a9590;margin-top:3px;"></div>
     </div>
     <div id="tfList"></div>
-    <button onclick="exportTfCSV()" style="width:100%;background:#4caf72;color:white;border:none;border-radius:10px;padding:13px;font-size:15px;font-weight:700;font-family:inherit;cursor:pointer;margin-top:12px;">📥 匯出調撥 CSV</button>
+    <div style="text-align:center;margin-top:16px;">
+      <span onclick="checkExportAuth()" style="font-size:12px;color:var(--text3);cursor:pointer;text-decoration:underline;">📥 匯出調撥 CSV（管理員）</span>
+    </div>
   </div>
 </div>
 </body>
