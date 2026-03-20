@@ -179,6 +179,24 @@ body { background: var(--bg); color: var(--text); font-family: 'PingFang TC','No
   <div class="loading-sub" id="loadingMsg">連線中...</div>
 </div>
 
+<!-- LOGIN SCREEN -->
+<div id="loginScreen" style="display:none;position:fixed;inset:0;background:#0f0f0f;z-index:9998;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px;">
+  <div style="font-size:52px;margin-bottom:16px;">🍕</div>
+  <div style="font-size:22px;font-weight:800;margin-bottom:8px;">Papa Vito 進貨系統</div>
+  <div style="font-size:14px;color:#9a9590;margin-bottom:32px;">請輸入你的名字來開始</div>
+  <div style="width:100%;max-width:320px;">
+    <input type="text" id="loginNameInput" placeholder="你的名字（如：Kevin、Monica）"
+      style="width:100%;background:#1a1a1a;border:2px solid #2e2e2e;border-radius:10px;padding:14px 16px;color:#f0ede8;font-size:16px;font-family:inherit;outline:none;margin-bottom:14px;text-align:center;"
+      onfocus="this.style.borderColor='#e8502a'" onblur="this.style.borderColor='#2e2e2e'"
+      onkeydown="if(event.key==='Enter') doLogin()">
+    <button onclick="doLogin()"
+      style="width:100%;background:#e8502a;color:white;border:none;border-radius:10px;padding:14px;font-size:16px;font-weight:700;font-family:inherit;cursor:pointer;">
+      開始使用 →
+    </button>
+    <p style="font-size:11px;color:#5a5550;text-align:center;margin-top:12px;">名字只儲存在你的手機，不需要密碼</p>
+  </div>
+</div>
+
 <!-- MAIN APP -->
 <div id="app" style="display:none;">
 
@@ -189,6 +207,7 @@ body { background: var(--bg); color: var(--text); font-family: 'PingFang TC','No
     <p id="headerSub">連線中...</p>
   </div>
   <div class="sync-dot syncing" id="syncDot"></div>
+  <div style="font-size:11px;color:#9a9590;flex-shrink:0;" id="operatorBadge"></div>
   <div class="record-count-badge" id="headerCount">0</div>
 </div>
 
@@ -205,7 +224,7 @@ body { background: var(--bg); color: var(--text); font-family: 'PingFang TC','No
   <div class="card">
     <div class="card-title">店別選擇</div>
     <div class="store-toggle">
-      <div class="store-btn active" id="storeBtn1" onclick="setStore(1)">🏠 天母店</div>
+      <div class="store-btn" id="storeBtn1" onclick="setStore(1)">🏠 天母店</div>
       <div class="store-btn" id="storeBtn2" onclick="setStore(2)">🏪 昌吉店</div>
     </div>
   </div>
@@ -433,9 +452,7 @@ try {
   const q = query(collection(db, 'entries'), orderBy('date', 'desc'));
   onSnapshot(q, (snap) => {
     window.allRecords = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-    // 隱藏載入畫面
-    document.getElementById('loadingScreen').style.display = 'none';
-    document.getElementById('app').style.display = 'block';
+    // Update sync status (login/loading already handled separately)
     document.getElementById('headerSub').textContent = '雲端同步 ✓';
     document.getElementById('syncDot').className = 'sync-dot online';
     // 更新 UI
@@ -444,28 +461,21 @@ try {
     if (typeof updateStats === 'function') updateStats();
   }, (err) => {
     console.error('Firestore error:', err);
-    document.getElementById('loadingScreen').style.display = 'none';
-    document.getElementById('app').style.display = 'block';
     document.getElementById('headerSub').textContent = '同步錯誤：' + err.code;
     document.getElementById('syncDot').className = 'sync-dot offline';
+    if (typeof initLogin === 'function') initLogin();
   });
 
-  // 5秒超時保護：如果還沒收到資料就先顯示畫面
+  // 3秒後觸發 login 流程（不管firebase是否回來）
   setTimeout(() => {
-    if (document.getElementById('loadingScreen').style.display !== 'none') {
-      document.getElementById('loadingScreen').style.display = 'none';
-      document.getElementById('app').style.display = 'block';
-      document.getElementById('headerSub').textContent = '連線逾時，請重整';
-      document.getElementById('syncDot').className = 'sync-dot offline';
-    }
-  }, 5000);
+    if (typeof initLogin === 'function') initLogin();
+  }, 1500);
 
 } catch(e) {
   console.error('Firebase init error:', e);
-  document.getElementById('loadingScreen').style.display = 'none';
-  document.getElementById('app').style.display = 'block';
   document.getElementById('headerSub').textContent = '初始化失敗：' + e.message;
   document.getElementById('syncDot').className = 'sync-dot offline';
+  setTimeout(() => { if (typeof initLogin === 'function') initLogin(); }, 500);
 }
 </script>
 
@@ -480,7 +490,7 @@ Object.defineProperty(window, 'allRecords', {
   set: (v) => { _allRecords = v; }
 });
 let selectedItem = null;
-let currentStore = 1;
+let currentStore = 0; // 0 = 未選
 let currentTax = 0;
 let currentFilter = 'all';
 let pendingPhotos = []; // {file, dataUrl}
@@ -523,6 +533,14 @@ function setStore(n) {
   document.getElementById('storeBtn1').classList.toggle('active', n===1);
   document.getElementById('storeBtn2').classList.toggle('active', n===2);
 }
+// Add "請選擇" hint under store toggle
+window.addEventListener('DOMContentLoaded', () => {
+  const hint = document.createElement('p');
+  hint.id = 'storeHint';
+  hint.style.cssText = 'font-size:11px;color:#e05050;margin-top:6px;display:none;';
+  hint.textContent = '⚠️ 請選擇店別';
+  document.querySelector('.store-toggle').after(hint);
+});
 function setTax(v) {
   currentTax = v;
   document.getElementById('taxBtn0').classList.toggle('active', v===0);
@@ -631,9 +649,18 @@ async function saveEntry() {
   const vendor = document.getElementById('vendor').value.trim();
   const invoice = document.getElementById('invoice').value.trim().toUpperCase();
 
+  if (currentStore === 0) {
+    document.getElementById('storeHint').style.display = 'block';
+    toast('❌ 請先選擇店別', true);
+    window.scrollTo({top:0, behavior:'smooth'});
+    return;
+  }
+  document.getElementById('storeHint') && (document.getElementById('storeHint').style.display = 'none');
   if (!date) { toast('❌ 請選擇日期', true); return; }
   if (isNaN(qty)||qty<=0) { toast('❌ 請輸入數量', true); return; }
   if (isNaN(price)||price<0) { toast('❌ 請輸入單價', true); return; }
+  if (!vendor) { toast('❌ 請填寫廠商', true); document.getElementById('vendor').focus(); return; }
+  if (!invoice) { toast('❌ 請填寫發票號碼', true); document.getElementById('invoice').focus(); return; }
 
   let code='', name='', spec='', unit='', cat='';
   if (isMisc) {
@@ -722,6 +749,7 @@ function renderRecords() {
         <span class="ri-tag">${r.qty} ${r.unit||''} × $${r.price}</span>
         ${r.invoice?`<span class="ri-tag">${r.invoice}</span>`:''}
         ${r.vendor?`<span class="ri-tag">${r.vendor}</span>`:''}
+        ${r.operator?`<span class="ri-tag" style="color:#9a9590;">👤${r.operator}</span>`:''}
         <span class="ri-tag del" onclick="deleteRecord('${r.id}')">🗑</span>
       </div>
       ${r.photos && r.photos.length ? `
@@ -837,10 +865,14 @@ function setInputMode(mode) {
   const taxWrap = document.getElementById('taxFieldWrap');
   if (mode === 'posttax') {
     label.textContent = '含稅單價（元）';
-    taxWrap.style.opacity = '0.4';
+    // 自動切到應稅5%
+    setTax(0.05);
+    taxWrap.style.opacity = '0.5';
     taxWrap.style.pointerEvents = 'none';
   } else {
     label.textContent = '未稅單價（元）';
+    // 切回免稅
+    setTax(0);
     taxWrap.style.opacity = '1';
     taxWrap.style.pointerEvents = 'auto';
   }
@@ -863,6 +895,37 @@ document.addEventListener('click', e => {
     if (vr) vr.style.display='none';
   }
 });
+
+// ============ LOGIN ============
+let currentOperator = '';
+function initLogin() {
+  const saved = localStorage.getItem('pv_operator');
+  if (saved && saved.trim()) {
+    currentOperator = saved.trim();
+    showApp();
+  } else {
+    document.getElementById('loadingScreen').style.display = 'none';
+    document.getElementById('loginScreen').style.display = 'flex';
+  }
+}
+function doLogin() {
+  const name = document.getElementById('loginNameInput').value.trim();
+  if (!name) {
+    document.getElementById('loginNameInput').style.borderColor = '#e05050';
+    return;
+  }
+  currentOperator = name;
+  localStorage.setItem('pv_operator', name);
+  document.getElementById('loginScreen').style.display = 'none';
+  showApp();
+}
+function showApp() {
+  document.getElementById('loadingScreen').style.display = 'none';
+  document.getElementById('app').style.display = 'block';
+  document.getElementById('operatorBadge').textContent = '👤 ' + currentOperator;
+}
+// Run login check on load
+window.addEventListener('DOMContentLoaded', initLogin);
 </script>
 </body>
 </html>
