@@ -311,14 +311,37 @@ body { background: var(--bg); color: var(--text); font-family: 'PingFang TC','No
         <div class="tax-btn" id="inputModeBtn1" onclick="setInputMode('posttax')">輸入含稅價</div>
       </div>
     </div>
-    <div class="field-row">
-      <div class="field">
-        <label>數量</label>
-        <input type="number" id="qty" placeholder="0" step="0.1" min="0" inputmode="decimal" oninput="updatePreview()">
+    <!-- 一般模式 -->
+    <div id="normalMode">
+      <div class="field-row">
+        <div class="field">
+          <label id="qtyLabel">數量</label>
+          <input type="number" id="qty" placeholder="0" step="0.1" min="0" inputmode="decimal" oninput="updatePreview()">
+        </div>
+        <div class="field">
+          <label id="priceLabel">未稅單價（元）</label>
+          <input type="number" id="price" placeholder="0" step="0.01" min="0" inputmode="decimal" oninput="updatePreview()">
+        </div>
       </div>
-      <div class="field">
-        <label id="priceLabel">未稅單價（元）</label>
-        <input type="number" id="price" placeholder="0" step="0.01" min="0" inputmode="decimal" oninput="updatePreview()">
+    </div>
+    <!-- 重量模式（KG/斤） -->
+    <div id="weightMode" style="display:none;">
+      <div style="background:rgba(232,80,42,0.08);border:1px solid rgba(232,80,42,0.3);border-radius:8px;padding:10px 12px;margin-bottom:10px;">
+        <p style="font-size:12px;color:#e8502a;font-weight:700;">⚖️ 重量計費品項</p>
+        <p style="font-size:11px;color:#9a9590;margin-top:3px;">直接輸入重量和這次總共付多少，系統自動算單價</p>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label id="weightLabel">重量（KG）</label>
+          <input type="number" id="weightQty" placeholder="0.0" step="0.1" min="0" inputmode="decimal" oninput="updatePreview()">
+        </div>
+        <div class="field">
+          <label id="totalPaidLabel">這次總共付多少（元）</label>
+          <input type="number" id="totalPaid" placeholder="0" step="1" min="0" inputmode="decimal" oninput="updatePreview()">
+        </div>
+      </div>
+      <div style="background:var(--surface2);border-radius:8px;padding:8px 12px;font-size:12px;color:var(--text2);">
+        換算單價：<strong style="color:var(--yellow);" id="calcUnitPrice">—</strong>
       </div>
     </div>
     <div class="field" id="taxFieldWrap">
@@ -545,7 +568,8 @@ function setTax(v) {
   currentTax = v;
   document.getElementById('taxBtn0').classList.toggle('active', v===0);
   document.getElementById('taxBtn5').classList.toggle('active', v===0.05);
-  document.getElementById('taxBtnX').classList.toggle('active', v===-1);
+  const btnX = document.getElementById('taxBtnX');
+  if (btnX) btnX.classList.toggle('active', v===-1);
   updatePreview();
 }
 
@@ -585,11 +609,21 @@ function selectItem(code) {
   document.getElementById('selBadge').classList.add('on');
   document.getElementById('miscCheck').checked = false;
   document.getElementById('miscSection').style.display = 'none';
+  checkWeightMode();
+  // reset values
+  document.getElementById('qty').value = '';
+  document.getElementById('price').value = '';
+  if (document.getElementById('weightQty')) document.getElementById('weightQty').value = '';
+  if (document.getElementById('totalPaid')) document.getElementById('totalPaid').value = '';
+  document.getElementById('totalPreview').textContent = '—';
 }
 function clearSelected() {
   selectedItem = null;
   document.getElementById('searchInput').value = '';
   document.getElementById('selBadge').classList.remove('on');
+  isWeightMode = false;
+  document.getElementById('normalMode').style.display = 'block';
+  document.getElementById('weightMode').style.display = 'none';
 }
 function toggleMisc() {
   const on = document.getElementById('miscCheck').checked;
@@ -599,19 +633,36 @@ function toggleMisc() {
 
 // ============ PREVIEW ============
 function updatePreview() {
-  const qty = parseFloat(document.getElementById('qty').value)||0;
-  const price = parseFloat(document.getElementById('price').value)||0;
-  let sub, total;
-  if (inputMode === 'posttax') {
-    total = Math.round(qty * price);
-    const taxRate = currentTax >= 0 ? currentTax : 0;
-    sub = taxRate > 0 ? Math.round(total / (1 + taxRate)) : total;
+  const taxRate = currentTax >= 0 ? currentTax : 0;
+  let sub, total, qty, price;
+
+  if (isWeightMode) {
+    // 重量模式：用者輸入總金額，反推單價
+    qty = parseFloat(document.getElementById('weightQty').value)||0;
+    const totalPaidVal = parseFloat(document.getElementById('totalPaid').value)||0;
+    if (inputMode === 'posttax') {
+      total = totalPaidVal;
+      sub = taxRate > 0 ? Math.round(total / (1 + taxRate)) : total;
+    } else {
+      sub = totalPaidVal;
+      total = Math.round(sub * (1 + taxRate));
+    }
+    // 顯示換算單價
+    const unitPrice = qty > 0 ? (sub / qty).toFixed(2) : '—';
+    const el = document.getElementById('calcUnitPrice');
+    if (el) el.textContent = qty > 0 ? '$' + unitPrice + ' / ' + (selectedItem ? selectedItem.unit : 'KG') : '—';
   } else {
-    sub = Math.round(qty * price);
-    const taxRate = currentTax >= 0 ? currentTax : 0;
-    total = Math.round(sub * (1 + taxRate));
+    qty = parseFloat(document.getElementById('qty').value)||0;
+    price = parseFloat(document.getElementById('price').value)||0;
+    if (inputMode === 'posttax') {
+      total = Math.round(qty * price);
+      sub = taxRate > 0 ? Math.round(total / (1 + taxRate)) : total;
+    } else {
+      sub = Math.round(qty * price);
+      total = Math.round(sub * (1 + taxRate));
+    }
   }
-  document.getElementById('totalPreview').textContent = total > 0 ? '$'+total.toLocaleString() : '—';
+  document.getElementById('totalPreview').textContent = (total||0) > 0 ? '$'+total.toLocaleString() : '—';
 }
 
 // ============ PHOTO HANDLING ============
@@ -674,14 +725,34 @@ async function saveEntry() {
     else cat='1、食材成本';
   }
 
-  let sub, total;
+  let sub, total, finalQty, finalPrice;
   const taxRate = currentTax >= 0 ? currentTax : 0;
-  if (inputMode === 'posttax') {
-    total = Math.round(qty * price);
-    sub = taxRate > 0 ? Math.round(total / (1 + taxRate)) : total;
+
+  if (isWeightMode) {
+    finalQty = parseFloat(document.getElementById('weightQty').value)||0;
+    const totalPaidVal = parseFloat(document.getElementById('totalPaid').value)||0;
+    if (finalQty <= 0 || totalPaidVal <= 0) { toast('❌ 請填寫重量和總金額', true); return; }
+    if (inputMode === 'posttax') {
+      total = totalPaidVal;
+      sub = taxRate > 0 ? Math.round(total / (1 + taxRate)) : total;
+    } else {
+      sub = totalPaidVal;
+      total = Math.round(sub * (1 + taxRate));
+    }
+    finalPrice = finalQty > 0 ? Math.round((sub / finalQty) * 100) / 100 : 0;
+    qty = finalQty;
+    price = finalPrice;
   } else {
-    sub = Math.round(qty * price);
-    total = Math.round(sub * (1 + taxRate));
+    finalQty = parseFloat(document.getElementById('qty').value)||0;
+    finalPrice = parseFloat(document.getElementById('price').value)||0;
+    qty = finalQty; price = finalPrice;
+    if (inputMode === 'posttax') {
+      total = Math.round(qty * price);
+      sub = taxRate > 0 ? Math.round(total / (1 + taxRate)) : total;
+    } else {
+      sub = Math.round(qty * price);
+      total = Math.round(sub * (1 + taxRate));
+    }
   }
   const taxVal = currentTax === 0.05 ? 0.05 : 0;
 
@@ -706,6 +777,8 @@ async function saveEntry() {
     // Reset
     document.getElementById('qty').value = '';
     document.getElementById('price').value = '';
+    if (document.getElementById('weightQty')) document.getElementById('weightQty').value = '';
+    if (document.getElementById('totalPaid')) document.getElementById('totalPaid').value = '';
     document.getElementById('vendor').value = '';
     document.getElementById('invoice').value = '';
     document.getElementById('totalPreview').textContent = '—';
@@ -856,6 +929,19 @@ function selectVendor(v) {
 
 // ============ INPUT MODE (含稅/未稅) ============
 let inputMode = 'pretax'; // pretax = 輸入未稅, posttax = 輸入含稅
+let isWeightMode = false;
+const WEIGHT_UNITS = ['KG', 'kg', '公斤', '斤', 'G', 'g', '公克', '克'];
+
+function checkWeightMode() {
+  const useWeight = selectedItem && WEIGHT_UNITS.includes(selectedItem.unit);
+  isWeightMode = useWeight;
+  document.getElementById('normalMode').style.display = useWeight ? 'none' : 'block';
+  document.getElementById('weightMode').style.display = useWeight ? 'block' : 'none';
+  if (useWeight) {
+    const lbl = document.getElementById('weightLabel');
+    if (lbl) lbl.textContent = '重量（' + selectedItem.unit + '）';
+  }
+}
 
 function setInputMode(mode) {
   inputMode = mode;
