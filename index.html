@@ -804,6 +804,33 @@ function toggleMisc() {
   if (on) clearSelected();
 }
 
+// ============ DUPLICATE CHECK ============
+function checkDuplicate(date, store, codeOrName, vendor, invoice) {
+  if (!window.allRecords || !window.allRecords.length) return null;
+  const storeVal = (store === 1 || store === 2) ? Number(store) : String(store);
+  const hasInvoice = invoice && invoice !== '待補' && invoice !== '';
+  
+  for (const r of window.allRecords) {
+    // 比對：同天、同店、同品項（code 或 name）、同廠商
+    const sameDate = r.date === date;
+    const sameStore = String(r.store) === String(storeVal);
+    const sameItem = r.code === codeOrName || r.name === codeOrName;
+    const sameVendor = r.vendor === vendor;
+    if (!sameDate || !sameStore || !sameItem || !sameVendor) continue;
+    
+    // 如果兩筆都有發票號碼，也要相同才算重複
+    const rHasInv = r.invoice && r.invoice !== '待補' && r.invoice !== '';
+    if (hasInvoice && rHasInv) {
+      if (r.invoice.toUpperCase() === invoice.toUpperCase()) return r;
+    } else if (!hasInvoice && !rHasInv) {
+      // 兩筆都沒發票號碼，其他條件都符合就算重複
+      return r;
+    }
+    // 一筆有一筆沒有，不算重複（可能是先輸入後補發票）
+  }
+  return null;
+}
+
 // ============ PREVIEW ============
 function updatePreview() {
   const taxRate = currentTax >= 0 ? currentTax : 0;
@@ -904,6 +931,15 @@ async function saveEntry() {
       const selCat = document.getElementById('itemCatSelect') ? document.getElementById('itemCatSelect').value : '';
       if (selCat) cat = selCat;
     }
+  }
+
+  // ── 重複記錄檢查 ──
+  const dupCheck = checkDuplicate(date, currentStore, code || name, vendor, invoice);
+  if (dupCheck) {
+    // 找到可能重複的記錄，跳出確認視窗
+    const dupMsg = '⚠️ 可能有重複記錄！\n\n已有一筆：' + dupCheck.date + ' ' + dupCheck.name + '\n廠商：' + dupCheck.vendor + (dupCheck.invoice && dupCheck.invoice !== '待補' ? '\n發票：' + dupCheck.invoice : '') + '\n\n確定要繼續儲存嗎？';
+    const go = confirm(dupMsg);
+    if (!go) return;
   }
 
   // ── 數量與金額計算 ──
