@@ -927,23 +927,19 @@ async function saveEntry() {
     toast('✅ 已儲存：' + name);
     rememberVendor(vendor);
 
-    // Reset form
+    // Reset form（保留店別、廠商、稅別，方便連續輸入同張單）
     document.getElementById('qty').value = '';
     document.getElementById('price').value = '';
     const wq = document.getElementById('weightQty');
     if (wq) wq.value = '';
     const tp = document.getElementById('totalPaid');
     if (tp) tp.value = '';
-    document.getElementById('vendor').value = '';
     document.getElementById('invoice').value = '';
     document.getElementById('totalPreview').textContent = '—';
     clearSelected();
     document.getElementById('miscCheck').checked = false;
     document.getElementById('miscSection').style.display = 'none';
-    // 重置稅別
-    setTax(-99);
-    // 重置店別
-    setStore(0);
+    // 店別、廠商、稅別 保留不重置
 
   } catch(err) {
     document.getElementById('uploadingOverlay').style.display = 'none';
@@ -952,6 +948,26 @@ async function saveEntry() {
   }
 }
 
+
+// ============ DATE RANGE ============
+function setDateRange(preset) {
+  const today = new Date();
+  const fmt = d => d.toISOString().split('T')[0];
+  const from = document.getElementById('fDateFrom');
+  const to = document.getElementById('fDateTo');
+  if (preset === 'today') {
+    from.value = fmt(today); to.value = fmt(today);
+  } else if (preset === 'week') {
+    const mon = new Date(today); mon.setDate(today.getDate() - today.getDay() + 1);
+    from.value = fmt(mon); to.value = fmt(today);
+  } else if (preset === 'month') {
+    from.value = fmt(new Date(today.getFullYear(), today.getMonth(), 1));
+    to.value = fmt(today);
+  } else {
+    from.value = ''; to.value = '';
+  }
+  renderRecords();
+}
 
 // ============ FILTER TOGGLE ============
 let filterOpen = true;
@@ -1082,6 +1098,12 @@ function renderRecords() {
   updateFilterChips(recs);
 
   // Apply filters
+  // 日期範圍篩選
+  const dfrom = document.getElementById('fDateFrom') ? document.getElementById('fDateFrom').value : '';
+  const dto = document.getElementById('fDateTo') ? document.getElementById('fDateTo').value : '';
+  if (dfrom) recs = recs.filter(r => r.date && r.date >= dfrom);
+  if (dto) recs = recs.filter(r => r.date && r.date <= dto);
+
   if (activeFilters.store !== 'all') recs = recs.filter(r => String(r.store) === activeFilters.store);
   if (activeFilters.operator !== 'all') recs = recs.filter(r => r.operator === activeFilters.operator);
   if (activeFilters.vendor !== 'all') recs = recs.filter(r => r.vendor === activeFilters.vendor);
@@ -1798,6 +1820,18 @@ function exportTfCSV(skipAuth) {
       <div id="tfUnpaidList" style="font-size:11px;color:#9a9590;margin-top:3px;"></div>
     </div>
     <div id="tfList"></div>
+    <div style="font-size:11px;color:var(--text2);margin:8px 0 4px;font-weight:600;">日期範圍</div>
+    <div style="display:flex;gap:6px;align-items:center;margin-bottom:5px;">
+      <input type="date" id="fDateFrom" onchange="renderRecords()" style="flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:7px;padding:6px 8px;color:var(--text);font-size:12px;font-family:inherit;outline:none;">
+      <span style="font-size:12px;color:var(--text2);">～</span>
+      <input type="date" id="fDateTo" onchange="renderRecords()" style="flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:7px;padding:6px 8px;color:var(--text);font-size:12px;font-family:inherit;outline:none;">
+    </div>
+    <div style="display:flex;gap:5px;margin-bottom:8px;">
+      <div onclick="setDateRange('today')" style="flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:5px 4px;text-align:center;font-size:11px;font-weight:600;color:var(--text2);cursor:pointer;">今天</div>
+      <div onclick="setDateRange('week')" style="flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:5px 4px;text-align:center;font-size:11px;font-weight:600;color:var(--text2);cursor:pointer;">本週</div>
+      <div onclick="setDateRange('month')" style="flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:5px 4px;text-align:center;font-size:11px;font-weight:600;color:var(--text2);cursor:pointer;">本月</div>
+      <div onclick="setDateRange('clear')" style="flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:5px 4px;text-align:center;font-size:11px;font-weight:600;color:var(--text2);cursor:pointer;">清除</div>
+    </div>
     <div style="text-align:center;margin-top:16px;">
       <span onclick="checkExportAuth()" style="font-size:12px;color:var(--text3);cursor:pointer;text-decoration:underline;">📥 匯出調撥 CSV（管理員）</span>
     </div>
