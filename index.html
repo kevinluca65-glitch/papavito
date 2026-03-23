@@ -1478,18 +1478,22 @@ function showApp() {
 }
 
 function enterSection(section) {
+  // 先隱藏首頁，用 setTimeout 讓觸摸事件消散後再顯示目標頁面
+  // 避免事件穿透造成第二次跳回首頁
   document.getElementById('homeScreen').style.display = 'none';
-  if (section === 'transfer') {
-    document.getElementById('transferApp').style.display = 'block';
-    var d = new Date();
-    document.getElementById('tfDate').value = d.toISOString().split('T')[0];
-    document.getElementById('tfMonth').value = d.toISOString().slice(0,7);
-    initTfListener();
-    renderTf();
-  } else {
-    document.getElementById('app').style.display = 'block';
-    document.getElementById('operatorBadge').textContent = '👤 ' + currentOperator;
-  }
+  setTimeout(function() {
+    if (section === 'transfer') {
+      document.getElementById('transferApp').style.display = 'block';
+      var d = new Date();
+      document.getElementById('tfDate').value = d.toISOString().split('T')[0];
+      document.getElementById('tfMonth').value = d.toISOString().slice(0,7);
+      initTfListener();
+      renderTf();
+    } else {
+      document.getElementById('app').style.display = 'block';
+      document.getElementById('operatorBadge').textContent = '👤 ' + currentOperator;
+    }
+  }, 50);
 }
 
 function goHome() {
