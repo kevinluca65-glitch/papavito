@@ -230,10 +230,23 @@ body { background: var(--bg); color: var(--text); font-family: 'PingFang TC','No
   <!-- Store -->
   <div class="card">
     <div class="card-title">店別選擇</div>
-    <div class="store-toggle">
+    <div class="store-toggle" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;">
       <div class="store-btn" id="storeBtn1" onclick="setStore(1)">🏠 天母店</div>
       <div class="store-btn" id="storeBtn2" onclick="setStore(2)">🏪 昌吉店</div>
+      <div class="store-btn" id="storeBtnO" onclick="toggleOtherStore()">📦 其他</div>
     </div>
+    <!-- 其他店別子選單 -->
+    <div id="otherStorePanel" style="display:none;margin-top:10px;">
+      <div style="font-size:11px;color:var(--text2);margin-bottom:6px;font-weight:600;">選擇其他店別</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
+        <div class="store-btn" id="storeBtnM" onclick="setStore('M')">👤 Monica (M)</div>
+        <div class="store-btn" id="storeBtnK" onclick="setStore('K')">👤 Kevin (K)</div>
+        <div class="store-btn" id="storeBtn0x" onclick="setStore('0')">🏢 非門店 (0)</div>
+        <div class="store-btn" id="storeBtnF" onclick="setStore('F')">❄️ 冷凍 (F)</div>
+        <div class="store-btn" id="storeBtnPVK" onclick="setStore('PVK')">🍳 PVK</div>
+      </div>
+    </div>
+    <p id="storeHint" style="font-size:11px;color:#e05050;margin-top:5px;display:none;">⚠️ 請選擇店別</p>
   </div>
 
   <!-- Item Search -->
@@ -675,17 +688,38 @@ function switchTab(t) {
 // ============ STORE / TAX ============
 function setStore(n) {
   currentStore = n;
-  document.getElementById('storeBtn1').classList.toggle('active', n===1);
-  document.getElementById('storeBtn2').classList.toggle('active', n===2);
+  // 清除所有店別按鈕 active
+  ['storeBtn1','storeBtn2','storeBtnO','storeBtnM','storeBtnK','storeBtn0x','storeBtnF','storeBtnPVK'].forEach(function(id) {
+    var el = document.getElementById(id); if (el) el.classList.remove('active');
+  });
+  var panel = document.getElementById('otherStorePanel');
+  if (n === 1) {
+    document.getElementById('storeBtn1').classList.add('active');
+    if (panel) panel.style.display = 'none';
+  } else if (n === 2) {
+    document.getElementById('storeBtn2').classList.add('active');
+    if (panel) panel.style.display = 'none';
+  } else {
+    // 其他店別：展開子選單，標記對應按鈕
+    document.getElementById('storeBtnO').classList.add('active');
+    if (panel) panel.style.display = 'block';
+    var idMap = {'M':'storeBtnM','K':'storeBtnK','0':'storeBtn0x','F':'storeBtnF','PVK':'storeBtnPVK'};
+    var subId = idMap[String(n)];
+    if (subId && document.getElementById(subId)) document.getElementById(subId).classList.add('active');
+  }
+  var hint = document.getElementById('storeHint');
+  if (hint) hint.style.display = 'none';
 }
-// Add "請選擇" hint under store toggle
-window.addEventListener('DOMContentLoaded', () => {
-  const hint = document.createElement('p');
-  hint.id = 'storeHint';
-  hint.style.cssText = 'font-size:11px;color:#e05050;margin-top:6px;display:none;';
-  hint.textContent = '⚠️ 請選擇店別';
-  document.querySelector('.store-toggle').after(hint);
-});
+
+function toggleOtherStore() {
+  var panel = document.getElementById('otherStorePanel');
+  if (!panel) return;
+  var isOpen = panel.style.display !== 'none';
+  panel.style.display = isOpen ? 'none' : 'block';
+  var btn = document.getElementById('storeBtnO');
+  if (btn) btn.classList.toggle('active', !isOpen);
+  // 如果收起來且目前是其他店別，不清除 currentStore
+}
 function setTax(v) {
   currentTax = v;
   document.getElementById('taxBtn0').classList.toggle('active', v===0);
@@ -1182,7 +1216,7 @@ function renderRecords() {
       </div>
       <div class="ri-tags">
         <span class="ri-tag">${r.date}</span>
-        <span class="ri-tag ${r.store===1?'s1':'s2'}">${r.store===1?'🏠天母':'🏪昌吉'}</span>
+        <span class="ri-tag ${r.store===1?'s1':r.store===2?'s2':''}">${r.store===1?'🏠天母':r.store===2?'🏪昌吉':r.store==='PVK'?'🍳PVK':r.store==='M'?'👤Monica':r.store==='K'?'👤Kevin':r.store==='0'?'🏢非門店':r.store==='F'?'❄️冷凍':String(r.store||'')}</span>
         ${r.code?`<span class="ri-tag">${r.code}</span>`:''}
         <span class="ri-tag">${r.qty} ${r.unit||''} × $${r.price}</span>
         ${r.cat?`<span class="ri-tag" style="color:var(--text3);">${r.cat}</span>`:''}
@@ -1682,7 +1716,7 @@ async function saveTf() {
   }
 }
 
-function tfSName(s) { return s==='1'?'🏠天母':s==='2'?'🏪昌吉':s==='PVK'?'🍳PVK':s; }
+function tfSName(s) { var ss=String(s); return ss==='1'?'🏠天母':ss==='2'?'🏪昌吉':ss==='PVK'?'🍳PVK':ss==='M'?'👤Monica':ss==='K'?'👤Kevin':ss==='0'?'🏢非門店':ss==='F'?'❄️冷凍':ss; }
 
 function renderTf() {
   var month = document.getElementById('tfMonth') ? document.getElementById('tfMonth').value : '';
@@ -1781,11 +1815,25 @@ function exportTfCSV(skipAuth) {
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;">
         <div><label style="display:block;font-size:12px;color:#9a9590;margin-bottom:4px;font-weight:600;">轉出店</label>
           <select id="tfFrom" style="width:100%;background:#242424;border:1px solid #2e2e2e;border-radius:8px;padding:10px 12px;color:#f0ede8;font-size:15px;font-family:inherit;outline:none;">
-            <option value="">請選擇</option><option value="1">🏠 天母店</option><option value="2">🏪 昌吉店</option><option value="PVK">🍳 PVK</option>
+            <option value="">請選擇</option>
+            <option value="1">🏠 天母店</option>
+            <option value="2">🏪 昌吉店</option>
+            <option value="PVK">🍳 PVK</option>
+            <option value="M">👤 Monica (M)</option>
+            <option value="K">👤 Kevin (K)</option>
+            <option value="0">🏢 非門店 (0)</option>
+            <option value="F">❄️ 冷凍 (F)</option>
           </select></div>
         <div><label style="display:block;font-size:12px;color:#9a9590;margin-bottom:4px;font-weight:600;">轉入店</label>
           <select id="tfTo" style="width:100%;background:#242424;border:1px solid #2e2e2e;border-radius:8px;padding:10px 12px;color:#f0ede8;font-size:15px;font-family:inherit;outline:none;">
-            <option value="">請選擇</option><option value="1">🏠 天母店</option><option value="2">🏪 昌吉店</option><option value="PVK">🍳 PVK</option>
+            <option value="">請選擇</option>
+            <option value="1">🏠 天母店</option>
+            <option value="2">🏪 昌吉店</option>
+            <option value="PVK">🍳 PVK</option>
+            <option value="M">👤 Monica (M)</option>
+            <option value="K">👤 Kevin (K)</option>
+            <option value="0">🏢 非門店 (0)</option>
+            <option value="F">❄️ 冷凍 (F)</option>
           </select></div>
       </div>
       <div style="margin-bottom:10px;">
