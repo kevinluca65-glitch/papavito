@@ -170,8 +170,6 @@ body { background: var(--bg); color: var(--text); font-family: 'PingFang TC','No
 /* UPLOADING OVERLAY */
 .uploading-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 500; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; }
 .uploading-overlay p { font-size: 16px; font-weight: 700; color: white; }
-.sort-btn{background:var(--surface2);border:1px solid var(--border);border-radius:14px;padding:4px 10px;font-size:11px;font-weight:600;color:var(--text2);cursor:pointer;white-space:nowrap;flex-shrink:0;}
-.sort-btn.active{border-color:var(--accent);color:var(--accent);background:rgba(232,80,42,0.1);}
 </style>
 </head>
 <body>
@@ -399,17 +397,9 @@ body { background: var(--bg); color: var(--text); font-family: 'PingFang TC','No
 <div class="panel" id="panel-records">
 
   <!-- 月份 + 筆數 -->
-  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;gap:6px;">
-    <span style="font-size:13px;color:var(--text2);flex-shrink:0;" id="recordsCount">載入中...</span>
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+    <span style="font-size:13px;color:var(--text2);" id="recordsCount">載入中...</span>
     <input type="month" id="monthFilter" style="background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:5px 8px;color:var(--text);font-size:12px;font-family:inherit;" onchange="renderRecords()">
-  </div>
-  <div style="display:flex;align-items:center;gap:6px;margin-bottom:10px;overflow-x:auto;padding-bottom:2px;">
-    <span style="font-size:11px;color:var(--text3);flex-shrink:0;">排序：</span>
-    <div class="sort-btn active" id="sort-date" onclick="setSort('date')">⏱ 輸入時間</div>
-    <div class="sort-btn" id="sort-invdate" onclick="setSort('invdate')">📅 發票日期</div>
-    <div class="sort-btn" id="sort-cat" onclick="setSort('cat')">📂 類別</div>
-    <div class="sort-btn" id="sort-code" onclick="setSort('code')">🔤 品項編號</div>
-    <div class="sort-btn" id="sort-amt" onclick="setSort('amt')">💰 金額高低</div>
   </div>
 
   <!-- 篩選卡片 -->
@@ -453,22 +443,6 @@ body { background: var(--bg); color: var(--text); font-family: 'PingFang TC','No
       </div>
     </div>
 
-    <!-- 日期範圍 -->
-    <div style="margin-bottom:10px;">
-      <div style="font-size:11px;color:var(--text2);margin-bottom:5px;font-weight:600;">日期範圍</div>
-      <div style="display:flex;gap:6px;align-items:center;margin-bottom:5px;">
-        <input type="date" id="fDateFrom" onchange="renderRecords()" style="flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:7px;padding:6px 8px;color:var(--text);font-size:12px;font-family:inherit;outline:none;">
-        <span style="font-size:12px;color:var(--text2);">～</span>
-        <input type="date" id="fDateTo" onchange="renderRecords()" style="flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:7px;padding:6px 8px;color:var(--text);font-size:12px;font-family:inherit;outline:none;">
-      </div>
-      <div style="display:flex;gap:5px;">
-        <div onclick="setDateRange('today')" style="flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:5px 4px;text-align:center;font-size:11px;font-weight:600;color:var(--text2);cursor:pointer;">今天</div>
-        <div onclick="setDateRange('week')" style="flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:5px 4px;text-align:center;font-size:11px;font-weight:600;color:var(--text2);cursor:pointer;">本週</div>
-        <div onclick="setDateRange('month')" style="flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:5px 4px;text-align:center;font-size:11px;font-weight:600;color:var(--text2);cursor:pointer;">本月</div>
-        <div onclick="setDateRange('clear')" style="flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:5px 4px;text-align:center;font-size:11px;font-weight:600;color:var(--text2);cursor:pointer;">清除</div>
-      </div>
-    </div>
-
     <!-- 關鍵字搜尋 -->
     <div>
       <div style="font-size:11px;color:var(--text2);margin-bottom:5px;font-weight:600;">關鍵字搜尋</div>
@@ -476,7 +450,6 @@ body { background: var(--bg); color: var(--text); font-family: 'PingFang TC','No
         style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:9px 12px;color:var(--text);font-size:14px;font-family:inherit;outline:none;"
         oninput="renderRecords()">
     </div>
-    </div><!-- /filterBody -->
   </div>
 
   <!-- 合計小計 -->
@@ -508,8 +481,8 @@ body { background: var(--bg); color: var(--text); font-family: 'PingFang TC','No
     <p style="font-size:12px;color:var(--text2);line-height:1.6;margin-bottom:14px;">
       匯出後，開啟 Excel 進貨表工作表，在最後空白行貼上資料即可。欄位順序與您的 Excel 完全一致。
     </p>
-    <button class="btn-export" onclick="exportCSV()">📥 下載 CSV</button>
-    <button class="btn-secondary" onclick="copyCSV()">📋 複製到剪貼板</button>
+    <button class="btn-export" onclick="checkExportAuth('download')">📥 下載 CSV（管理員）</button>
+    <button class="btn-secondary" onclick="checkExportAuth('copy')">📋 複製到剪貼板（管理員）</button>
   </div>
 </div>
 
@@ -517,10 +490,10 @@ body { background: var(--bg); color: var(--text); font-family: 'PingFang TC','No
 <div class="panel" id="panel-admin">
   <div class="card">
     <div class="card-title">➕ 新增品項到資料庫</div>
-    <p style="font-size:12px;color:var(--text2);margin-bottom:12px;line-height:1.6;">新增後立即可在輸入頁面搜尋到。識別碼請依照現有規則（A083、C036…）</p>
+    <p style="font-size:12px;color:var(--text2);margin-bottom:12px;line-height:1.6;">新增後立刻可在輸入頁面搜尋到。識別碼依照現有規則（A083、C036…）</p>
     <div class="field-row">
       <div class="field"><label>識別碼</label><input type="text" id="newItemCode" placeholder="如 A083" style="text-transform:uppercase;"></div>
-      <div class="field"><label>類別前綴</label>
+      <div class="field"><label>類別</label>
         <select id="newItemCat">
           <option value="食材-乾貨">A - 食材乾貨</option>
           <option value="食材-冷藏">B - 食材冷藏</option>
@@ -540,20 +513,10 @@ body { background: var(--bg); color: var(--text); font-family: 'PingFang TC','No
     </div>
     <button class="btn-primary" onclick="addCustomItem()">➕ 新增品項</button>
   </div>
-
   <div class="card">
     <div class="card-title">📦 自訂品項清單</div>
-    <p style="font-size:12px;color:var(--text2);margin-bottom:10px;">你新增的品項（可刪除）</p>
-    <div id="customItemsList"></div>
+    <div id="customItemsList"><p style="font-size:13px;color:var(--text3);text-align:center;padding:14px;">尚無自訂品項</p></div>
   </div>
-</div>
-
-</div><!-- /app -->
-
-<!-- PHOTO VIEWER -->
-<div class="photo-viewer" id="photoViewer" style="display:none;" onclick="closePhotoViewer()">
-  <img id="viewerImg" src="">
-  <button class="photo-viewer-close" onclick="closePhotoViewer()">✕</button>
 </div>
 
 <!-- UPLOADING OVERLAY -->
@@ -565,6 +528,26 @@ body { background: var(--bg); color: var(--text); font-family: 'PingFang TC','No
 <div class="toast" id="toast"></div>
 
 <!-- Firebase SDK -->
+<script>
+// 緊急 fallback：5秒後如果還是黑畫面就強制顯示
+setTimeout(function() {
+  var ls = document.getElementById('loadingScreen');
+  var login = document.getElementById('loginScreen');
+  var home = document.getElementById('homeScreen');
+  var app = document.getElementById('app');
+  // 如果所有畫面都是 none，顯示 loading
+  var anyVisible = (ls && ls.style.display !== 'none') || 
+                   (login && login.style.display !== 'none') ||
+                   (home && home.style.display !== 'none') ||
+                   (app && app.style.display !== 'none');
+  if (!anyVisible) {
+    if (ls) { ls.style.display = 'flex'; }
+    var msg = document.getElementById('loadingMsg');
+    if (msg) msg.textContent = '請重新整理頁面';
+  }
+}, 5000);
+</script>
+
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { getFirestore, collection, addDoc, deleteDoc, doc, query, orderBy, onSnapshot, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
@@ -943,7 +926,7 @@ async function saveEntry() {
     toast('✅ 已儲存：' + name);
     rememberVendor(vendor);
 
-    // Reset form（保留店別、廠商、稅別，方便連續輸入同張單）
+    // Reset form
     document.getElementById('qty').value = '';
     document.getElementById('price').value = '';
     const wq = document.getElementById('weightQty');
@@ -955,7 +938,7 @@ async function saveEntry() {
     clearSelected();
     document.getElementById('miscCheck').checked = false;
     document.getElementById('miscSection').style.display = 'none';
-    // 店別、廠商、稅別 保留不重置
+    // 店別、廠商、稅別保留
 
   } catch(err) {
     document.getElementById('uploadingOverlay').style.display = 'none';
@@ -964,48 +947,6 @@ async function saveEntry() {
   }
 }
 
-
-// ============ DATE RANGE ============
-function setDateRange(preset) {
-  const today = new Date();
-  const fmt = d => d.toISOString().split('T')[0];
-  const from = document.getElementById('fDateFrom');
-  const to = document.getElementById('fDateTo');
-  if (preset === 'today') {
-    from.value = fmt(today); to.value = fmt(today);
-  } else if (preset === 'week') {
-    const mon = new Date(today); mon.setDate(today.getDate() - today.getDay() + 1);
-    from.value = fmt(mon); to.value = fmt(today);
-  } else if (preset === 'month') {
-    from.value = fmt(new Date(today.getFullYear(), today.getMonth(), 1));
-    to.value = fmt(today);
-  } else {
-    from.value = ''; to.value = '';
-  }
-  renderRecords();
-}
-
-// ============ FILTER TOGGLE ============
-let filterOpen = true;
-function toggleFilter() {
-  filterOpen = !filterOpen;
-  const body = document.getElementById('filterBody');
-  const icon = document.getElementById('filterToggleIcon');
-  const hint = document.getElementById('filterToggleHint');
-  if (body) body.style.display = filterOpen ? 'block' : 'none';
-  if (icon) icon.textContent = filterOpen ? '▲' : '▼';
-  if (hint) hint.textContent = filterOpen ? '點擊收合' : '點擊展開';
-}
-
-// ============ SORT ============
-let currentSort = 'date';
-function setSort(s) {
-  currentSort = s;
-  document.querySelectorAll('.sort-btn').forEach(b => b.classList.remove('active'));
-  const btn = document.getElementById('sort-' + s);
-  if (btn) btn.classList.add('active');
-  renderRecords();
-}
 
 // ============ RECORDS & FILTERS ============
 let activeFilters = { store: 'all', operator: 'all', vendor: 'all', cat: 'all' };
@@ -1114,12 +1055,6 @@ function renderRecords() {
   updateFilterChips(recs);
 
   // Apply filters
-  // 日期範圍篩選
-  const dfrom = document.getElementById('fDateFrom') ? document.getElementById('fDateFrom').value : '';
-  const dto = document.getElementById('fDateTo') ? document.getElementById('fDateTo').value : '';
-  if (dfrom) recs = recs.filter(r => r.date && r.date >= dfrom);
-  if (dto) recs = recs.filter(r => r.date && r.date <= dto);
-
   if (activeFilters.store !== 'all') recs = recs.filter(r => String(r.store) === activeFilters.store);
   if (activeFilters.operator !== 'all') recs = recs.filter(r => r.operator === activeFilters.operator);
   if (activeFilters.vendor !== 'all') recs = recs.filter(r => r.vendor === activeFilters.vendor);
@@ -1136,34 +1071,8 @@ function renderRecords() {
     );
   }
 
-  // 排序
-  if (currentSort === 'date') {
-    recs.sort((a,b) => (b.createdAt?.seconds||0) - (a.createdAt?.seconds||0));
-  } else if (currentSort === 'invdate') {
-    recs.sort((a,b) => (b.date||'').localeCompare(a.date||''));
-  } else if (currentSort === 'cat') {
-    recs.sort((a,b) => (a.cat||'').localeCompare(b.cat||'', 'zh-TW'));
-  } else if (currentSort === 'code') {
-    recs.sort((a,b) => (a.code||'').localeCompare(b.code||''));
-  } else if (currentSort === 'amt') {
-    recs.sort((a,b) => (b.total||0) - (a.total||0));
-  }
-
   // Update count & total
   const total = recs.reduce((s,r) => s+(r.total||0), 0);
-  // 排序
-  if (currentSort === 'date') {
-    recs.sort((a,b) => (b.createdAt?.seconds||0) - (a.createdAt?.seconds||0));
-  } else if (currentSort === 'invdate') {
-    recs.sort((a,b) => (b.date||'').localeCompare(a.date||''));
-  } else if (currentSort === 'cat') {
-    recs.sort((a,b) => (a.cat||'').localeCompare(b.cat||'', 'zh-TW'));
-  } else if (currentSort === 'code') {
-    recs.sort((a,b) => (a.code||'').localeCompare(b.code||''));
-  } else if (currentSort === 'amt') {
-    recs.sort((a,b) => (b.total||0) - (a.total||0));
-  }
-
   document.getElementById('recordsCount').textContent = `${month} · 共 ${recs.length} 筆`;
   const filterTotal = document.getElementById('filterTotal');
   if (filterTotal) filterTotal.textContent = '$' + total.toLocaleString();
@@ -1469,17 +1378,13 @@ function doLogin() {
   showApp();
 }
 function showApp() {
-  // 隱藏 loading
   document.getElementById('loadingScreen').style.display = 'none';
-  // 顯示首頁（不直接進 app）
   document.getElementById('homeScreen').style.display = 'flex';
   document.getElementById('homeGreet').textContent = '歡迎，' + currentOperator + '！';
   document.getElementById('homeOpName').textContent = currentOperator;
 }
 
 function enterSection(section) {
-  // 先隱藏首頁，用 setTimeout 讓觸摸事件消散後再顯示目標頁面
-  // 避免事件穿透造成第二次跳回首頁
   document.getElementById('homeScreen').style.display = 'none';
   setTimeout(function() {
     if (section === 'transfer') {
@@ -1513,6 +1418,116 @@ function doLogout() {
 }
 // Run login check on load
 window.addEventListener('DOMContentLoaded', initLogin);
+</script>
+
+<!-- ADMIN PASSWORD OVERLAY -->
+<div id="adminOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:9999;flex-direction:column;align-items:center;justify-content:center;padding:32px;">
+  <div style="background:#1a1a1a;border:1px solid #2e2e2e;border-radius:16px;padding:28px;width:100%;max-width:300px;text-align:center;">
+    <div style="font-size:36px;margin-bottom:12px;">🔐</div>
+    <div style="font-size:17px;font-weight:700;color:#f0ede8;margin-bottom:6px;">管理員驗證</div>
+    <div style="font-size:13px;color:#9a9590;margin-bottom:20px;">請輸入管理員密碼</div>
+    <input type="password" id="adminPwInput" placeholder="輸入密碼" onkeydown="if(event.key==='Enter')verifyAdminPw()"
+      style="width:100%;background:#0f0f0f;border:2px solid #2e2e2e;border-radius:10px;padding:12px 16px;color:#f0ede8;font-size:16px;font-family:inherit;outline:none;text-align:center;margin-bottom:12px;">
+    <button onclick="verifyAdminPw()" style="width:100%;background:#e8502a;color:white;border:none;border-radius:10px;padding:12px;font-size:15px;font-weight:700;font-family:inherit;cursor:pointer;margin-bottom:8px;">確認</button>
+    <button onclick="closeAdminOverlay()" style="width:100%;background:transparent;border:none;color:#9a9590;font-size:13px;font-family:inherit;cursor:pointer;padding:8px;">取消</button>
+  </div>
+</div>
+
+<!-- HOME SCREEN -->
+<div id="homeScreen" style="display:none;position:fixed;inset:0;background:#0f0f0f;z-index:9990;flex-direction:column;align-items:center;justify-content:center;padding:28px;">
+  <div style="font-size:48px;margin-bottom:10px;">🍕</div>
+  <div style="font-size:20px;font-weight:800;color:#f0ede8;margin-bottom:4px;">Papa Vito</div>
+  <div id="homeGreet" style="font-size:13px;color:#9a9590;margin-bottom:36px;"></div>
+  <div style="width:100%;max-width:320px;display:flex;flex-direction:column;gap:14px;">
+    <button onclick="enterSection('input')" style="background:#e8502a;color:white;border:none;border-radius:14px;padding:20px;font-size:17px;font-weight:800;font-family:inherit;cursor:pointer;display:flex;align-items:center;gap:14px;text-align:left;">
+      <span style="font-size:32px;">📦</span>
+      <div><div>進貨系統</div><div style="font-size:12px;font-weight:400;opacity:0.8;margin-top:2px;">記錄進貨、查看記錄、匯出CSV</div></div>
+    </button>
+    <button onclick="enterSection('transfer')" style="background:#1a1a1a;color:white;border:2px solid #5ba5e8;border-radius:14px;padding:20px;font-size:17px;font-weight:800;font-family:inherit;cursor:pointer;display:flex;align-items:center;gap:14px;text-align:left;">
+      <span style="font-size:32px;">🔄</span>
+      <div><div style="color:#5ba5e8;">調撥系統</div><div style="font-size:12px;font-weight:400;color:#9a9590;margin-top:2px;">天母、昌吉、PVK 之間調貨</div></div>
+    </button>
+  </div>
+  <div style="margin-top:28px;font-size:12px;color:#5a5550;cursor:pointer;" onclick="doLogout()">👤 <span id="homeOpName"></span>　·　登出</div>
+</div>
+
+<!-- TRANSFER APP -->
+<div id="transferApp" style="display:none;position:fixed;inset:0;background:#0f0f0f;z-index:9990;overflow-y:auto;">
+  <div style="background:#1a1a1a;border-bottom:1px solid #2e2e2e;padding:11px 14px;display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:50;">
+    <div style="width:34px;height:34px;background:#5ba5e8;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0;">🔄</div>
+    <div style="flex:1;"><div style="font-size:14px;font-weight:700;color:#f0ede8;">調撥系統</div><div style="font-size:11px;color:#9a9590;" id="tfSyncStatus">—</div></div>
+    <button onclick="goHome()" style="background:#242424;border:1px solid #2e2e2e;border-radius:8px;padding:6px 12px;color:#9a9590;font-size:12px;font-family:inherit;cursor:pointer;">← 首頁</button>
+  </div>
+  <div style="padding:14px 14px 48px;">
+    <div style="background:#1a1a1a;border:1px solid #2e2e2e;border-radius:12px;padding:13px;margin-bottom:11px;">
+      <div style="font-size:11px;font-weight:700;color:#e8502a;text-transform:uppercase;letter-spacing:1px;margin-bottom:11px;">新增調撥記錄</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;">
+        <div><label style="display:block;font-size:12px;color:#9a9590;margin-bottom:4px;font-weight:600;">轉出店</label>
+          <select id="tfFrom" style="width:100%;background:#242424;border:1px solid #2e2e2e;border-radius:8px;padding:10px 12px;color:#f0ede8;font-size:15px;font-family:inherit;outline:none;">
+            <option value="">請選擇</option><option value="1">🏠 天母店</option><option value="2">🏪 昌吉店</option><option value="PVK">🍳 PVK</option>
+          </select></div>
+        <div><label style="display:block;font-size:12px;color:#9a9590;margin-bottom:4px;font-weight:600;">轉入店</label>
+          <select id="tfTo" style="width:100%;background:#242424;border:1px solid #2e2e2e;border-radius:8px;padding:10px 12px;color:#f0ede8;font-size:15px;font-family:inherit;outline:none;">
+            <option value="">請選擇</option><option value="1">🏠 天母店</option><option value="2">🏪 昌吉店</option><option value="PVK">🍳 PVK</option>
+          </select></div>
+      </div>
+      <div style="margin-bottom:10px;">
+        <label style="display:block;font-size:12px;color:#9a9590;margin-bottom:4px;font-weight:600;">調撥日期</label>
+        <input type="date" id="tfDate" style="width:100%;background:#242424;border:1px solid #2e2e2e;border-radius:8px;padding:10px 12px;color:#f0ede8;font-size:15px;font-family:inherit;outline:none;">
+        <div style="display:flex;gap:5px;margin-top:5px;">
+          <div onclick="tfSetDate(0)" style="flex:1;background:#242424;border:1px solid #2e2e2e;border-radius:6px;padding:6px 4px;text-align:center;font-size:11px;font-weight:600;color:#9a9590;cursor:pointer;">今天</div>
+          <div onclick="tfSetDate(-1)" style="flex:1;background:#242424;border:1px solid #2e2e2e;border-radius:6px;padding:6px 4px;text-align:center;font-size:11px;font-weight:600;color:#9a9590;cursor:pointer;">昨天</div>
+          <div onclick="tfSetDate(-2)" style="flex:1;background:#242424;border:1px solid #2e2e2e;border-radius:6px;padding:6px 4px;text-align:center;font-size:11px;font-weight:600;color:#9a9590;cursor:pointer;">前天</div>
+        </div>
+      </div>
+      <div style="margin-bottom:10px;">
+        <label style="display:block;font-size:12px;color:#9a9590;margin-bottom:4px;font-weight:600;">品項</label>
+        <div style="position:relative;">
+          <input type="text" id="tfSearchInput" placeholder="輸入品項名稱或識別碼" autocomplete="off" oninput="onTfSearch()" style="width:100%;background:#242424;border:1px solid #2e2e2e;border-radius:8px;padding:10px 12px 10px 32px;color:#f0ede8;font-size:15px;font-family:inherit;outline:none;">
+          <span style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:#5a5550;font-size:14px;pointer-events:none;">🔍</span>
+          <div id="tfSearchResults" style="display:none;position:absolute;left:0;right:0;background:#242424;border:1px solid #e8502a;border-top:none;border-radius:0 0 10px 10px;z-index:200;max-height:200px;overflow-y:auto;"></div>
+        </div>
+      </div>
+      <div id="tfSelBadge" style="display:none;background:#242424;border:1px solid #4caf72;border-radius:8px;padding:9px 11px;margin-bottom:10px;">
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span id="tfSbCode" style="background:#4caf72;color:white;border-radius:4px;padding:2px 7px;font-size:11px;font-weight:800;flex-shrink:0;"></span>
+          <div style="flex:1;"><div id="tfSbName" style="font-size:13px;font-weight:700;color:#f0ede8;"></div><div id="tfSbSpec" style="font-size:11px;color:#9a9590;margin-top:1px;"></div></div>
+          <span onclick="clearTfSel()" style="color:#5a5550;font-size:18px;cursor:pointer;line-height:1;">✕</span>
+        </div>
+      </div>
+      <div style="margin-bottom:10px;">
+        <label id="tfQtyLabel" style="display:block;font-size:12px;color:#9a9590;margin-bottom:4px;font-weight:600;">數量</label>
+        <input type="number" id="tfQty" placeholder="0" step="0.1" min="0" inputmode="decimal" style="width:100%;background:#242424;border:1px solid #2e2e2e;border-radius:8px;padding:10px 12px;color:#f0ede8;font-size:15px;font-family:inherit;outline:none;">
+      </div>
+      <div style="margin-bottom:10px;">
+        <label style="display:block;font-size:12px;color:#9a9590;margin-bottom:4px;font-weight:600;">付款狀態</label>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
+          <div id="tfPaidNBtn" onclick="setTfPaid('未付')" style="background:#242424;border:2px solid #e8502a;border-radius:8px;padding:9px 6px;text-align:center;cursor:pointer;font-size:13px;font-weight:700;color:#e8502a;">⏳ 未付款</div>
+          <div id="tfPaidYBtn" onclick="setTfPaid('已付')" style="background:#242424;border:1px solid #2e2e2e;border-radius:8px;padding:9px 6px;text-align:center;cursor:pointer;font-size:13px;font-weight:700;color:#9a9590;">✅ 當場已付</div>
+        </div>
+      </div>
+      <div id="tfAmtWrap" style="display:none;margin-bottom:10px;">
+        <label style="display:block;font-size:12px;color:#9a9590;margin-bottom:4px;font-weight:600;">付款金額（元）</label>
+        <input type="number" id="tfPaidAmt" placeholder="實際付了多少" step="1" min="0" inputmode="decimal" style="width:100%;background:#242424;border:1px solid #2e2e2e;border-radius:8px;padding:10px 12px;color:#f0ede8;font-size:15px;font-family:inherit;outline:none;">
+      </div>
+      <button onclick="saveTf()" style="width:100%;background:#5ba5e8;color:white;border:none;border-radius:10px;padding:13px;font-size:15px;font-weight:700;font-family:inherit;cursor:pointer;">🔄 儲存調撥記錄</button>
+    </div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+      <span style="font-size:13px;color:#9a9590;" id="tfCount">—</span>
+      <input type="month" id="tfMonth" onchange="renderTf()" style="background:#242424;border:1px solid #2e2e2e;border-radius:6px;padding:5px 8px;color:#f0ede8;font-size:12px;font-family:inherit;">
+    </div>
+    <div id="tfUnpaidAlert" style="display:none;background:rgba(245,166,35,0.1);border:1px solid #f5a623;border-radius:9px;padding:10px 13px;margin-bottom:10px;">
+      <div style="font-size:13px;color:#f5a623;font-weight:700;">⚠️ 有未付款調撥記錄</div>
+      <div id="tfUnpaidList" style="font-size:11px;color:#9a9590;margin-top:3px;"></div>
+    </div>
+    <div id="tfList"></div>
+    <div style="text-align:center;margin-top:16px;padding-bottom:20px;">
+      <span onclick="checkExportAuth('tf')" style="font-size:12px;color:#5a5550;cursor:pointer;text-decoration:underline;">📥 匯出調撥 CSV（管理員）</span>
+    </div>
+  </div>
+</div>
+
+<script>
 
 // ── ADMIN AUTH ───────────────────────────────────────────────
 const ADMIN_PW = 'Papavito2015';
@@ -1523,35 +1538,32 @@ function checkAdminAuth(callback) {
   if (adminAuthed) { if(callback) callback(); return; }
   pendingExportAction = callback || null;
   document.getElementById('adminOverlay').style.display = 'flex';
-  setTimeout(() => { const el = document.getElementById('adminPwInput'); if(el) el.focus(); }, 100);
+  setTimeout(function(){ var el=document.getElementById('adminPwInput'); if(el) el.focus(); }, 100);
 }
 
 function checkExportAuth(action) {
-  pendingExportAction = action || 'download';
-  checkAdminAuth(function() {
-    if (pendingExportAction === 'copy') copyCSV();
-    else if (pendingExportAction === 'tf') exportTfCSV();
-    else exportCSV();
-  });
+  var cb;
+  if (action === 'copy') cb = function(){ copyCSV(); };
+  else if (action === 'tf') cb = function(){ exportTfCSV(); };
+  else cb = function(){ exportCSV(); };
+  checkAdminAuth(cb);
 }
 
 function verifyAdminPw() {
-  const pw = document.getElementById('adminPwInput').value;
+  var pw = document.getElementById('adminPwInput').value;
   if (pw === ADMIN_PW) {
     adminAuthed = true;
     document.getElementById('adminOverlay').style.display = 'none';
     document.getElementById('adminPwInput').value = '';
     toast('✅ 驗證成功');
-    if (pendingExportAction !== null) {
-      if (pendingExportAction === 'copy') copyCSV();
-      else if (pendingExportAction === 'tf') exportTfCSV();
-      else exportCSV();
+    if (typeof pendingExportAction === 'function') {
+      pendingExportAction();
       pendingExportAction = null;
     }
   } else {
     document.getElementById('adminPwInput').value = '';
     document.getElementById('adminPwInput').style.borderColor = '#e05050';
-    setTimeout(() => { document.getElementById('adminPwInput').style.borderColor = '#2e2e2e'; }, 1500);
+    setTimeout(function(){ document.getElementById('adminPwInput').style.borderColor = '#2e2e2e'; }, 1500);
     toast('❌ 密碼錯誤', true);
   }
 }
@@ -1580,11 +1592,10 @@ function initTfListener() {
       if (el) el.textContent = '雲端同步 ✓';
       renderTf();
     }, function(err) {
-      console.warn('TF err:', err);
       var el = document.getElementById('tfSyncStatus');
       if (el) el.textContent = '同步錯誤';
     });
-  } catch(e) { console.warn('TF init err:', e); }
+  } catch(e) { console.warn('TF init:', e); }
 }
 
 function tfSetDate(off) {
@@ -1600,12 +1611,17 @@ function onTfSearch() {
     if (!q) { el.style.display = 'none'; return; }
     var hits = ITEMS.filter(function(i){ return i.name.toLowerCase().includes(q) || i.code.toLowerCase().includes(q); }).slice(0,10);
     if (!hits.length) { el.style.display = 'none'; return; }
-    el.innerHTML = hits.map(function(i){
-      return '<div onclick="pickTfItem(\'' + i.code + '\')" style="padding:10px 12px;cursor:pointer;border-bottom:1px solid #2e2e2e;">' +
+    var html = '';
+    hits.forEach(function(i) {
+      html += '<div class="tf-item" data-code="' + i.code + '" style="padding:10px 12px;cursor:pointer;border-bottom:1px solid #2e2e2e;">' +
         '<div style="font-size:14px;font-weight:600;color:#f0ede8;">' + i.name + '</div>' +
         '<div style="font-size:11px;color:#9a9590;margin-top:2px;"><span style="color:#e8502a;font-weight:700;">' + i.code + '</span> · ' + (i.unit||'—') + '</div>' +
         '</div>';
-    }).join('');
+    });
+    el.innerHTML = html;
+    el.querySelectorAll('.tf-item').forEach(function(d) {
+      d.onclick = function() { pickTfItem(d.getAttribute('data-code')); };
+    });
     el.style.display = 'block';
   }, 150);
 }
@@ -1631,14 +1647,13 @@ function clearTfSel() {
 
 function setTfPaid(v) {
   curTfPaid = v;
-  var nBtn = document.getElementById('tfPaidNBtn');
-  var yBtn = document.getElementById('tfPaidYBtn');
+  var n = document.getElementById('tfPaidNBtn'), y = document.getElementById('tfPaidYBtn');
   if (v === '未付') {
-    nBtn.style.border = '2px solid #e8502a'; nBtn.style.color = '#e8502a';
-    yBtn.style.border = '1px solid #2e2e2e'; yBtn.style.color = '#9a9590';
+    n.style.border = '2px solid #e8502a'; n.style.color = '#e8502a';
+    y.style.border = '1px solid #2e2e2e'; y.style.color = '#9a9590';
   } else {
-    yBtn.style.border = '2px solid #4caf72'; yBtn.style.color = '#4caf72';
-    nBtn.style.border = '1px solid #2e2e2e'; nBtn.style.color = '#9a9590';
+    y.style.border = '2px solid #4caf72'; y.style.color = '#4caf72';
+    n.style.border = '1px solid #2e2e2e'; n.style.color = '#9a9590';
   }
   document.getElementById('tfAmtWrap').style.display = v === '已付' ? 'block' : 'none';
 }
@@ -1648,23 +1663,20 @@ async function saveTf() {
   var to = document.getElementById('tfTo').value;
   var date = document.getElementById('tfDate').value;
   var qtyVal = parseFloat(document.getElementById('tfQty').value);
-  var serial = document.getElementById('tfSerial').value.trim();
   var paidAmt = curTfPaid === '已付' ? (parseFloat(document.getElementById('tfPaidAmt').value)||0) : 0;
   if (!from) { toast('❌ 請選擇轉出店', true); return; }
   if (!to) { toast('❌ 請選擇轉入店', true); return; }
   if (from === to) { toast('❌ 轉出和轉入不能相同', true); return; }
   if (!date) { toast('❌ 請選擇日期', true); return; }
   if (!tfSelItem) { toast('❌ 請選擇品項', true); return; }
-  if (isNaN(qtyVal) || qtyVal <= 0) { toast('❌ 請輸入數量', true); return; }
+  if (isNaN(qtyVal)||qtyVal<=0) { toast('❌ 請輸入數量', true); return; }
   if (curTfPaid === '已付' && paidAmt <= 0) { toast('❌ 請填寫付款金額', true); return; }
   var data = {
     date: String(date), fromStore: String(from), toStore: String(to),
     code: String(tfSelItem.code), name: String(tfSelItem.name),
     spec: String(tfSelItem.spec||''), unit: String(tfSelItem.unit||''),
-    qty: Number(qtyVal), paidAmount: Number(paidAmt),
-    serial: String(serial), paid: String(curTfPaid),
-    operator: String(currentOperator||'未知'),
-    createdAt: window._serverTimestamp()
+    qty: Number(qtyVal), paidAmount: Number(paidAmt), paid: String(curTfPaid),
+    operator: String(currentOperator||'未知'), createdAt: window._serverTimestamp()
   };
   document.getElementById('uploadingOverlay').style.display = 'flex';
   document.getElementById('uploadingMsg').textContent = '儲存調撥中...';
@@ -1673,14 +1685,10 @@ async function saveTf() {
     document.getElementById('uploadingOverlay').style.display = 'none';
     toast('✅ 調撥記錄已儲存');
     clearTfSel();
-    ['tfSerial','tfQty','tfPaidAmt'].forEach(function(id){ var el=document.getElementById(id); if(el) el.value=''; });
-    document.getElementById('tfFrom').value = '';
-    document.getElementById('tfTo').value = '';
+    ['tfQty','tfPaidAmt'].forEach(function(id){ var el=document.getElementById(id); if(el) el.value=''; });
+    document.getElementById('tfFrom').value = ''; document.getElementById('tfTo').value = '';
     setTfPaid('未付');
-  } catch(e) {
-    document.getElementById('uploadingOverlay').style.display = 'none';
-    toast('❌ 儲存失敗：' + e.message, true);
-  }
+  } catch(e) { document.getElementById('uploadingOverlay').style.display='none'; toast('❌ 儲存失敗：'+e.message, true); }
 }
 
 function tfSName(s) { return s==='1'?'🏠天母':s==='2'?'🏪昌吉':s==='PVK'?'🍳PVK':s; }
@@ -1688,31 +1696,49 @@ function tfSName(s) { return s==='1'?'🏠天母':s==='2'?'🏪昌吉':s==='PVK'
 function renderTf() {
   var month = document.getElementById('tfMonth') ? document.getElementById('tfMonth').value : '';
   var r = allTransfers.filter(function(x){ return !month||(x.date&&x.date.startsWith(month)); });
-  var ce = document.getElementById('tfCount'); if(ce) ce.textContent = month + ' · 共 ' + r.length + ' 筆';
-  var unpaid = r.filter(function(x){ return x.paid==='未付'; });
+  var ce = document.getElementById('tfCount');
+  if (ce) ce.textContent = month + ' · 共 ' + r.length + ' 筆調撥';
+  var unpaid = r.filter(function(x){ return x.paid === '未付'; });
   var ua = document.getElementById('tfUnpaidAlert');
   if (ua) {
     ua.style.display = unpaid.length ? 'block' : 'none';
-    if (unpaid.length) document.getElementById('tfUnpaidList').textContent = unpaid.map(function(x){ return x.date+' '+tfSName(x.fromStore)+'→'+tfSName(x.toStore)+' '+x.name; }).join('、');
+    if (unpaid.length) {
+      document.getElementById('tfUnpaidList').textContent = unpaid.map(function(x){
+        return x.date + ' ' + tfSName(x.fromStore) + '→' + tfSName(x.toStore) + ' ' + x.name;
+      }).join('、');
+    }
   }
-  var el = document.getElementById('tfList'); if (!el) return;
-  if (!r.length) { el.innerHTML = '<div style="text-align:center;padding:40px;color:#5a5550;"><div style="font-size:40px;margin-bottom:10px;">🔄</div><p>這個月沒有調撥記錄</p></div>'; return; }
-  el.innerHTML = r.map(function(x){
-    return '<div style="background:#1a1a1a;border:1px solid #2e2e2e;border-left:3px solid #5ba5e8;border-radius:10px;padding:11px 13px;margin-bottom:7px;">' +
+  var el = document.getElementById('tfList');
+  if (!el) return;
+  if (!r.length) {
+    el.innerHTML = '<div style="text-align:center;padding:40px;color:#5a5550;"><div style="font-size:40px;margin-bottom:10px;">🔄</div><p>這個月沒有調撥記錄</p></div>';
+    return;
+  }
+  el.innerHTML = '';
+  r.forEach(function(x) {
+    var div = document.createElement('div');
+    div.style.cssText = 'background:#1a1a1a;border:1px solid #2e2e2e;border-left:3px solid #5ba5e8;border-radius:10px;padding:11px 13px;margin-bottom:7px;';
+    var paidColor = x.paid === '已付' ? '#4caf72' : '#f5a623';
+    var paidText = x.paid === '已付' ? '✅已付' : '⏳未付';
+    var amtText = x.paid === '已付' ? '$' + (x.paidAmount||0).toLocaleString() : '未付';
+    div.innerHTML =
       '<div style="display:flex;justify-content:space-between;gap:8px;">' +
       '<div style="font-size:14px;font-weight:700;color:#f0ede8;flex:1;">' + x.name + '</div>' +
-      '<div style="font-size:15px;font-weight:800;color:#5ba5e8;">' + (x.paid==='已付'?'$'+(x.paidAmount||0).toLocaleString():'未付') + '</div></div>' +
+      '<div style="font-size:15px;font-weight:800;color:#5ba5e8;">' + amtText + '</div></div>' +
       '<div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:6px;">' +
       '<span style="background:#242424;border-radius:4px;padding:2px 7px;font-size:11px;color:#9a9590;">' + x.date + '</span>' +
       '<span style="background:#242424;border-radius:4px;padding:2px 7px;font-size:11px;color:#5ba5e8;font-weight:700;">' + tfSName(x.fromStore) + '→' + tfSName(x.toStore) + '</span>' +
       '<span style="background:#242424;border-radius:4px;padding:2px 7px;font-size:11px;color:#9a9590;">' + x.code + ' · ' + x.qty + (x.unit||'') + '</span>' +
-      (x.serial?'<span style="background:#242424;border-radius:4px;padding:2px 7px;font-size:11px;color:#9a9590;">📋'+x.serial+'</span>':'') +
-      '<span style="background:#242424;border-radius:4px;padding:2px 7px;font-size:11px;color:' + (x.paid==='已付'?'#4caf72':'#f5a623') + ';">' + (x.paid==='已付'?'✅已付':'⏳未付') + '</span>' +
+      '<span style="background:#242424;border-radius:4px;padding:2px 7px;font-size:11px;color:' + paidColor + ';">' + paidText + '</span>' +
       '<span style="background:#242424;border-radius:4px;padding:2px 7px;font-size:11px;color:#9a9590;">👤' + (x.operator||'') + '</span>' +
-      '<span onclick="deleteTf(\'' + x.id + '\')" style="background:#2a1515;border-radius:4px;padding:2px 7px;font-size:11px;color:#e05050;cursor:pointer;">🗑</span>' +
-      '</div></div>';
-  }).join('');
+      '<span class="del-tf-btn" style="background:#2a1515;border-radius:4px;padding:2px 7px;font-size:11px;color:#e05050;cursor:pointer;">🗑</span>' +
+      '</div>';
+    // 綁定刪除
+    div.querySelector('.del-tf-btn').addEventListener('click', (function(id){ return function(){ deleteTf(id); }; })(x.id));
+    el.appendChild(div);
+  });
 }
+
 
 async function deleteTf(id) {
   if (!confirm('確定刪除？')) return;
@@ -1720,130 +1746,31 @@ async function deleteTf(id) {
   catch(e) { toast('❌ 刪除失敗', true); }
 }
 
-function exportTfCSV(skipAuth) {
-  var month = document.getElementById('tfMonth').value;
+function exportTfCSV() {
+  var month = document.getElementById('tfMonth') ? document.getElementById('tfMonth').value : new Date().toISOString().slice(0,7);
   var r = allTransfers.filter(function(x){ return x.date&&x.date.startsWith(month); }).reverse();
-  if (!r.length) { toast('❌ 沒有資料', true); return; }
+  if (!r.length) { toast('❌ 沒有調撥資料', true); return; }
   var hdr = '調撥日期/時間,轉出店,識別碼,品項,規格,單位,單價（未稅）,數量,轉入店,流水號,價格（未稅）,付款完成?,實付金額';
   var rows = r.map(function(x){
-    return [x.date+' 0:00',x.fromStore,x.code,x.name,x.spec||'',x.unit||'','',x.qty,x.toStore,x.serial||'','',x.paid==='已付'?'Y':'N',x.paidAmount||0]
+    return [x.date+' 0:00', x.fromStore, x.code, x.name, x.spec||'', x.unit||'',
+      '', x.qty, x.toStore, '', '', x.paid==='已付'?'Y':'N', x.paidAmount||0]
       .map(function(v){ return '"'+String(v||'').replace(/"/g,'""')+'"'; }).join(',');
   });
-  var csv = '\uFEFF' + hdr + '\n' + rows.join('\n');
-  var blob = new Blob([csv],{type:'text/csv;charset=utf-8;'});
+  var csv = String.fromCharCode(65279) + hdr + '\n' + rows.join('\n');
+  var blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
   var url = URL.createObjectURL(blob);
   var a = document.createElement('a'); a.href=url; a.download='PapaVito_調撥_'+month+'.csv';
   a.click(); URL.revokeObjectURL(url);
   toast('✅ 調撥 CSV 下載完成！');
 }
 
+document.addEventListener('click', function(e) {
+  if (!e.target.closest || (!e.target.closest('#tfSearchInput') && !e.target.closest('#tfSearchResults'))) {
+    var el = document.getElementById('tfSearchResults');
+    if (el) el.style.display = 'none';
+  }
+});
+
 </script>
-
-<!-- ADMIN PASSWORD OVERLAY -->
-<div id="adminOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:9999;flex-direction:column;align-items:center;justify-content:center;padding:32px;">
-  <div style="background:#1a1a1a;border:1px solid #2e2e2e;border-radius:16px;padding:28px;width:100%;max-width:300px;text-align:center;">
-    <div style="font-size:36px;margin-bottom:12px;">🔐</div>
-    <div style="font-size:17px;font-weight:700;color:#f0ede8;margin-bottom:6px;">管理員驗證</div>
-    <div style="font-size:13px;color:#9a9590;margin-bottom:20px;">請輸入管理員密碼</div>
-    <input type="password" id="adminPwInput" placeholder="輸入密碼"
-      onkeydown="if(event.key==='Enter')verifyAdminPw()"
-      style="width:100%;background:#0f0f0f;border:2px solid #2e2e2e;border-radius:10px;padding:12px 16px;color:#f0ede8;font-size:16px;font-family:inherit;outline:none;text-align:center;margin-bottom:12px;">
-    <button onclick="verifyAdminPw()" style="width:100%;background:#e8502a;color:white;border:none;border-radius:10px;padding:12px;font-size:15px;font-weight:700;font-family:inherit;cursor:pointer;margin-bottom:8px;">確認</button>
-    <button onclick="closeAdminOverlay()" style="width:100%;background:transparent;border:none;color:#9a9590;font-size:13px;font-family:inherit;cursor:pointer;padding:8px;">取消</button>
-  </div>
-</div>
-
-<div id="homeScreen" style="display:none;position:fixed;inset:0;background:#0f0f0f;z-index:9990;flex-direction:column;align-items:center;justify-content:center;padding:28px;">
-  <div style="font-size:48px;margin-bottom:10px;">🍕</div>
-  <div style="font-size:20px;font-weight:800;color:#f0ede8;margin-bottom:4px;">Papa Vito</div>
-  <div id="homeGreet" style="font-size:13px;color:#9a9590;margin-bottom:36px;"></div>
-  <div style="width:100%;max-width:320px;display:flex;flex-direction:column;gap:14px;">
-    <button onclick="enterSection('input')" style="background:#e8502a;color:white;border:none;border-radius:14px;padding:20px;font-size:17px;font-weight:800;font-family:inherit;cursor:pointer;display:flex;align-items:center;gap:14px;text-align:left;">
-      <span style="font-size:32px;">📦</span>
-      <div><div>進貨系統</div><div style="font-size:12px;font-weight:400;opacity:0.8;margin-top:2px;">記錄進貨、查看記錄、匯出CSV</div></div>
-    </button>
-    <button onclick="enterSection('transfer')" style="background:#1a1a1a;color:white;border:2px solid #5ba5e8;border-radius:14px;padding:20px;font-size:17px;font-weight:800;font-family:inherit;cursor:pointer;display:flex;align-items:center;gap:14px;text-align:left;">
-      <span style="font-size:32px;">🔄</span>
-      <div><div style="color:#5ba5e8;">調撥系統</div><div style="font-size:12px;font-weight:400;color:#9a9590;margin-top:2px;">天母、昌吉、PVK 之間調貨</div></div>
-    </button>
-  </div>
-  <div style="margin-top:28px;font-size:12px;color:#5a5550;cursor:pointer;" onclick="doLogout()">👤 <span id="homeOpName"></span>　·　登出</div>
-</div>
-
-<div id="transferApp" style="display:none;position:fixed;inset:0;background:#0f0f0f;z-index:9990;overflow-y:auto;">
-  <div style="background:#1a1a1a;border-bottom:1px solid #2e2e2e;padding:11px 14px;display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:50;">
-    <div style="width:34px;height:34px;background:#5ba5e8;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0;">🔄</div>
-    <div style="flex:1;"><div style="font-size:14px;font-weight:700;color:#f0ede8;">調撥系統</div><div style="font-size:11px;color:#9a9590;" id="tfSyncStatus">—</div></div>
-    <button onclick="goHome()" style="background:#242424;border:1px solid #2e2e2e;border-radius:8px;padding:6px 12px;color:#9a9590;font-size:12px;font-family:inherit;cursor:pointer;">← 首頁</button>
-  </div>
-  <div style="padding:14px 14px 48px;">
-    <div style="background:#1a1a1a;border:1px solid #2e2e2e;border-radius:12px;padding:13px;margin-bottom:11px;">
-      <div style="font-size:11px;font-weight:700;color:#e8502a;text-transform:uppercase;letter-spacing:1px;margin-bottom:11px;">新增調撥記錄</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;">
-        <div><label style="display:block;font-size:12px;color:#9a9590;margin-bottom:4px;font-weight:600;">轉出店</label>
-          <select id="tfFrom" style="width:100%;background:#242424;border:1px solid #2e2e2e;border-radius:8px;padding:10px 12px;color:#f0ede8;font-size:15px;font-family:inherit;outline:none;">
-            <option value="">請選擇</option><option value="1">🏠 天母店</option><option value="2">🏪 昌吉店</option><option value="PVK">🍳 PVK</option>
-          </select></div>
-        <div><label style="display:block;font-size:12px;color:#9a9590;margin-bottom:4px;font-weight:600;">轉入店</label>
-          <select id="tfTo" style="width:100%;background:#242424;border:1px solid #2e2e2e;border-radius:8px;padding:10px 12px;color:#f0ede8;font-size:15px;font-family:inherit;outline:none;">
-            <option value="">請選擇</option><option value="1">🏠 天母店</option><option value="2">🏪 昌吉店</option><option value="PVK">🍳 PVK</option>
-          </select></div>
-      </div>
-      <div style="margin-bottom:10px;">
-        <label style="display:block;font-size:12px;color:#9a9590;margin-bottom:4px;font-weight:600;">日期</label>
-        <input type="date" id="tfDate" style="width:100%;background:#242424;border:1px solid #2e2e2e;border-radius:8px;padding:10px 12px;color:#f0ede8;font-size:15px;font-family:inherit;outline:none;">
-        <div style="display:flex;gap:5px;margin-top:5px;">
-          <div onclick="tfSetDate(0)" style="flex:1;background:#242424;border:1px solid #2e2e2e;border-radius:6px;padding:6px 4px;text-align:center;font-size:11px;font-weight:600;color:#9a9590;cursor:pointer;">今天</div>
-          <div onclick="tfSetDate(-1)" style="flex:1;background:#242424;border:1px solid #2e2e2e;border-radius:6px;padding:6px 4px;text-align:center;font-size:11px;font-weight:600;color:#9a9590;cursor:pointer;">昨天</div>
-          <div onclick="tfSetDate(-2)" style="flex:1;background:#242424;border:1px solid #2e2e2e;border-radius:6px;padding:6px 4px;text-align:center;font-size:11px;font-weight:600;color:#9a9590;cursor:pointer;">前天</div>
-        </div>
-      </div>
-      <div style="margin-bottom:10px;">
-        <label style="display:block;font-size:12px;color:#9a9590;margin-bottom:4px;font-weight:600;">品項</label>
-        <div style="position:relative;">
-          <input type="text" id="tfSearchInput" placeholder="輸入品項名稱或識別碼" autocomplete="off" oninput="onTfSearch()" style="width:100%;background:#242424;border:1px solid #2e2e2e;border-radius:8px;padding:10px 12px 10px 32px;color:#f0ede8;font-size:15px;font-family:inherit;outline:none;">
-          <span style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:#5a5550;font-size:14px;pointer-events:none;">🔍</span>
-          <div id="tfSearchResults" style="display:none;position:absolute;left:0;right:0;background:#242424;border:1px solid #e8502a;border-top:none;border-radius:0 0 10px 10px;z-index:200;max-height:200px;overflow-y:auto;"></div>
-        </div>
-      </div>
-      <div id="tfSelBadge" style="display:none;background:#242424;border:1px solid #4caf72;border-radius:8px;padding:9px 11px;margin-bottom:10px;">
-        <div style="display:flex;align-items:center;gap:8px;">
-          <span id="tfSbCode" style="background:#4caf72;color:white;border-radius:4px;padding:2px 7px;font-size:11px;font-weight:800;flex-shrink:0;"></span>
-          <div style="flex:1;"><div id="tfSbName" style="font-size:13px;font-weight:700;color:#f0ede8;"></div><div id="tfSbSpec" style="font-size:11px;color:#9a9590;margin-top:1px;"></div></div>
-          <span onclick="clearTfSel()" style="color:#5a5550;font-size:18px;cursor:pointer;line-height:1;">✕</span>
-        </div>
-      </div>
-      <div style="margin-bottom:10px;">
-        <label id="tfQtyLabel" style="display:block;font-size:12px;color:#9a9590;margin-bottom:4px;font-weight:600;">數量</label>
-        <input type="number" id="tfQty" placeholder="0" step="0.1" min="0" inputmode="decimal" style="width:100%;background:#242424;border:1px solid #2e2e2e;border-radius:8px;padding:10px 12px;color:#f0ede8;font-size:15px;font-family:inherit;outline:none;">
-      </div>
-      <input type="hidden" id="tfSerial" value="">
-      <div style="margin-bottom:10px;">
-        <label style="display:block;font-size:12px;color:#9a9590;margin-bottom:4px;font-weight:600;">付款狀態</label>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
-          <div id="tfPaidNBtn" onclick="setTfPaid('未付')" style="background:#242424;border:2px solid #e8502a;border-radius:8px;padding:9px 6px;text-align:center;cursor:pointer;font-size:13px;font-weight:700;color:#e8502a;">⏳ 未付款</div>
-          <div id="tfPaidYBtn" onclick="setTfPaid('已付')" style="background:#242424;border:1px solid #2e2e2e;border-radius:8px;padding:9px 6px;text-align:center;cursor:pointer;font-size:13px;font-weight:700;color:#9a9590;">✅ 當場已付</div>
-        </div>
-      </div>
-      <div id="tfAmtWrap" style="display:none;margin-bottom:10px;">
-        <label style="display:block;font-size:12px;color:#9a9590;margin-bottom:4px;font-weight:600;">付款金額（元）</label>
-        <input type="number" id="tfPaidAmt" placeholder="實際付了多少" step="1" min="0" inputmode="decimal" style="width:100%;background:#242424;border:1px solid #2e2e2e;border-radius:8px;padding:10px 12px;color:#f0ede8;font-size:15px;font-family:inherit;outline:none;">
-      </div>
-      <button onclick="saveTf()" style="width:100%;background:#5ba5e8;color:white;border:none;border-radius:10px;padding:13px;font-size:15px;font-weight:700;font-family:inherit;cursor:pointer;">🔄 儲存調撥記錄</button>
-    </div>
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
-      <span style="font-size:13px;color:#9a9590;" id="tfCount">—</span>
-      <input type="month" id="tfMonth" onchange="renderTf()" style="background:#242424;border:1px solid #2e2e2e;border-radius:6px;padding:5px 8px;color:#f0ede8;font-size:12px;font-family:inherit;">
-    </div>
-    <div id="tfUnpaidAlert" style="display:none;background:rgba(245,166,35,0.1);border:1px solid #f5a623;border-radius:9px;padding:10px 13px;margin-bottom:10px;">
-      <div style="font-size:13px;color:#f5a623;font-weight:700;">⚠️ 有未付款調撥記錄</div>
-      <div id="tfUnpaidList" style="font-size:11px;color:#9a9590;margin-top:3px;"></div>
-    </div>
-    <div id="tfList"></div>
-    <div style="text-align:center;margin-top:16px;">
-      <span onclick="checkExportAuth()" style="font-size:12px;color:var(--text3);cursor:pointer;text-decoration:underline;">📥 匯出調撥 CSV（管理員）</span>
-    </div>
-  </div>
-</div>
 </body>
 </html>
