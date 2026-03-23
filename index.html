@@ -354,7 +354,7 @@ body { background: var(--bg); color: var(--text); font-family: 'PingFang TC','No
     <div class="field" id="taxFieldWrap">
       <label>稅別</label>
       <div class="tax-toggle">
-        <div class="tax-btn active" id="taxBtn0" onclick="setTax(0)">免稅（0）</div>
+        <div class="tax-btn" id="taxBtn0" onclick="setTax(0)">免稅（0）</div>
         <div class="tax-btn" id="taxBtn5" onclick="setTax(0.05)">應稅 5%</div>
       </div>
     </div>
@@ -450,6 +450,22 @@ body { background: var(--bg); color: var(--text); font-family: 'PingFang TC','No
       <div style="font-size:11px;color:var(--text2);margin-bottom:5px;font-weight:600;">費用類別</div>
       <div style="display:flex;flex-wrap:wrap;gap:6px;" id="chipCats">
         <div class="filter-chip active" id="chipCat-all" onclick="setChip('cat','all')">全部</div>
+      </div>
+    </div>
+
+    <!-- 日期範圍 -->
+    <div style="margin-bottom:10px;">
+      <div style="font-size:11px;color:var(--text2);margin-bottom:5px;font-weight:600;">日期範圍</div>
+      <div style="display:flex;gap:6px;align-items:center;margin-bottom:5px;">
+        <input type="date" id="fDateFrom" onchange="renderRecords()" style="flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:7px;padding:6px 8px;color:var(--text);font-size:12px;font-family:inherit;outline:none;">
+        <span style="font-size:12px;color:var(--text2);">～</span>
+        <input type="date" id="fDateTo" onchange="renderRecords()" style="flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:7px;padding:6px 8px;color:var(--text);font-size:12px;font-family:inherit;outline:none;">
+      </div>
+      <div style="display:flex;gap:5px;">
+        <div onclick="setDateRange('today')" style="flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:5px 4px;text-align:center;font-size:11px;font-weight:600;color:var(--text2);cursor:pointer;">今天</div>
+        <div onclick="setDateRange('week')" style="flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:5px 4px;text-align:center;font-size:11px;font-weight:600;color:var(--text2);cursor:pointer;">本週</div>
+        <div onclick="setDateRange('month')" style="flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:5px 4px;text-align:center;font-size:11px;font-weight:600;color:var(--text2);cursor:pointer;">本月</div>
+        <div onclick="setDateRange('clear')" style="flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:5px 4px;text-align:center;font-size:11px;font-weight:600;color:var(--text2);cursor:pointer;">清除</div>
       </div>
     </div>
 
@@ -1820,18 +1836,6 @@ function exportTfCSV(skipAuth) {
       <div id="tfUnpaidList" style="font-size:11px;color:#9a9590;margin-top:3px;"></div>
     </div>
     <div id="tfList"></div>
-    <div style="font-size:11px;color:var(--text2);margin:8px 0 4px;font-weight:600;">日期範圍</div>
-    <div style="display:flex;gap:6px;align-items:center;margin-bottom:5px;">
-      <input type="date" id="fDateFrom" onchange="renderRecords()" style="flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:7px;padding:6px 8px;color:var(--text);font-size:12px;font-family:inherit;outline:none;">
-      <span style="font-size:12px;color:var(--text2);">～</span>
-      <input type="date" id="fDateTo" onchange="renderRecords()" style="flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:7px;padding:6px 8px;color:var(--text);font-size:12px;font-family:inherit;outline:none;">
-    </div>
-    <div style="display:flex;gap:5px;margin-bottom:8px;">
-      <div onclick="setDateRange('today')" style="flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:5px 4px;text-align:center;font-size:11px;font-weight:600;color:var(--text2);cursor:pointer;">今天</div>
-      <div onclick="setDateRange('week')" style="flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:5px 4px;text-align:center;font-size:11px;font-weight:600;color:var(--text2);cursor:pointer;">本週</div>
-      <div onclick="setDateRange('month')" style="flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:5px 4px;text-align:center;font-size:11px;font-weight:600;color:var(--text2);cursor:pointer;">本月</div>
-      <div onclick="setDateRange('clear')" style="flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:5px 4px;text-align:center;font-size:11px;font-weight:600;color:var(--text2);cursor:pointer;">清除</div>
-    </div>
     <div style="text-align:center;margin-top:16px;">
       <span onclick="checkExportAuth()" style="font-size:12px;color:var(--text3);cursor:pointer;text-decoration:underline;">📥 匯出調撥 CSV（管理員）</span>
     </div>
