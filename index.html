@@ -1521,18 +1521,19 @@ let pendingExportAction = null;
 
 function checkAdminAuth(callback) {
   if (adminAuthed) { if(callback) callback(); return; }
-  pendingExportAction = callback || null;
+  // 用 _pendingCallback 存 function，不要跟 pendingExportAction 混淆
+  window._pendingCallback = callback || null;
   document.getElementById('adminOverlay').style.display = 'flex';
   setTimeout(() => { const el = document.getElementById('adminPwInput'); if(el) el.focus(); }, 100);
 }
 
 function checkExportAuth(action) {
-  pendingExportAction = action || 'download';
-  checkAdminAuth(function() {
-    if (pendingExportAction === 'copy') copyCSV();
-    else if (pendingExportAction === 'tf') exportTfCSV();
-    else exportCSV();
-  });
+  // 直接決定要執行哪個函數，不存 string
+  var fn;
+  if (action === 'copy') fn = function() { copyCSV(); };
+  else if (action === 'tf') fn = function() { exportTfCSV(); };
+  else fn = function() { exportCSV(); };
+  checkAdminAuth(fn);
 }
 
 function verifyAdminPw() {
@@ -1542,11 +1543,9 @@ function verifyAdminPw() {
     document.getElementById('adminOverlay').style.display = 'none';
     document.getElementById('adminPwInput').value = '';
     toast('✅ 驗證成功');
-    if (pendingExportAction !== null) {
-      if (pendingExportAction === 'copy') copyCSV();
-      else if (pendingExportAction === 'tf') exportTfCSV();
-      else exportCSV();
-      pendingExportAction = null;
+    if (window._pendingCallback) {
+      window._pendingCallback();
+      window._pendingCallback = null;
     }
   } else {
     document.getElementById('adminPwInput').value = '';
