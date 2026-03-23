@@ -508,8 +508,8 @@ body { background: var(--bg); color: var(--text); font-family: 'PingFang TC','No
     <p style="font-size:12px;color:var(--text2);line-height:1.6;margin-bottom:14px;">
       匯出後，開啟 Excel 進貨表工作表，在最後空白行貼上資料即可。欄位順序與您的 Excel 完全一致。
     </p>
-    <button class="btn-export" onclick="exportCSV()">📥 下載 CSV</button>
-    <button class="btn-secondary" onclick="copyCSV()">📋 複製到剪貼板</button>
+    <button class="btn-export" onclick="checkExportAuth('download')">📥 下載 CSV</button>
+    <button class="btn-secondary" onclick="checkExportAuth('copy')">📋 複製到剪貼板</button>
   </div>
 </div>
 
