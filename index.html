@@ -531,20 +531,26 @@ body { background: var(--bg); color: var(--text); font-family: 'PingFang TC','No
   <div class="card">
     <div class="card-title">➕ 新增品項到資料庫</div>
     <p style="font-size:12px;color:var(--text2);margin-bottom:12px;line-height:1.6;">新增後立即可在輸入頁面搜尋到。識別碼請依照現有規則（A083、C036…）</p>
-    <div class="field-row">
-      <div class="field"><label>識別碼</label><input type="text" id="newItemCode" placeholder="如 A083" style="text-transform:uppercase;"></div>
-      <div class="field"><label>類別前綴</label>
-        <select id="newItemCat">
-          <option value="食材-乾貨">A - 食材乾貨</option>
-          <option value="食材-冷藏">B - 食材冷藏</option>
-          <option value="食材-生鮮">C - 生鮮蔬果</option>
-          <option value="飲料">D - 飲料</option>
-          <option value="成品">F - 成品</option>
-          <option value="包材">G - 包材</option>
-          <option value="耗材">J - 耗材</option>
-          <option value="冷凍">M/P - 冷凍</option>
-        </select>
-      </div>
+    <div class="field">
+      <label>類別</label>
+      <select id="newItemCat" onchange="autoGenCode()">
+        <option value="">請選擇類別</option>
+        <option value="食材-乾貨">A - 食材乾貨</option>
+        <option value="食材-冷藏">B - 食材冷藏</option>
+        <option value="食材-生鮮">C - 生鮮蔬果</option>
+        <option value="飲料">D - 飲料</option>
+        <option value="成品">F - 成品</option>
+        <option value="包材">G - 包材</option>
+        <option value="耗材">J - 耗材</option>
+        <option value="冷凍成品">M - 冷凍成品</option>
+        <option value="冷凍披薩">P - 冷凍披薩</option>
+        <option value="組合商品">Q - 組合商品</option>
+        <option value="運費">T - 運費</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>識別碼 <span style="font-size:11px;color:var(--green);font-weight:400;" id="autoCodeHint">（選完類別自動產生）</span></label>
+      <input type="text" id="newItemCode" placeholder="選完類別後自動填入" style="text-transform:uppercase;background:var(--surface2);color:var(--green);font-weight:700;">
     </div>
     <div class="field"><label>品項名稱</label><input type="text" id="newItemName" placeholder="如 孔雀餅乾"></div>
     <div class="field-row">
@@ -1684,15 +1690,51 @@ function mergeCustomItems() {
   });
 }
 
+function autoGenCode() {
+  const catPrefixMap = {
+    '食材-乾貨':'A','食材-冷藏':'B','食材-生鮮':'C','飲料':'D',
+    '成品':'F','包材':'G','耗材':'J','冷凍成品':'M',
+    '冷凍披薩':'P','組合商品':'Q','運費':'T'
+  };
+  const cat = document.getElementById('newItemCat').value;
+  const prefix = catPrefixMap[cat];
+  if (!prefix) { document.getElementById('newItemCode').value = ''; return; }
+  const allItems = [...ITEMS, ...(window.allCustomItems||[])];
+  const existing = allItems
+    .map(i => i.code)
+    .filter(c => c && c.charAt(0).toUpperCase() === prefix)
+    .map(c => parseInt(c.slice(1)))
+    .filter(n => !isNaN(n));
+  const maxNum = existing.length > 0 ? Math.max(...existing) : 0;
+  const nextCode = prefix + String(maxNum + 1).padStart(3, '0');
+  document.getElementById('newItemCode').value = nextCode;
+  const hint = document.getElementById('autoCodeHint');
+  if (hint) hint.textContent = '（自動產生：' + nextCode + '）';
+}
+
 function addCustomItem() {
   const code = document.getElementById('newItemCode').value.trim().toUpperCase();
   const cat = document.getElementById('newItemCat').value;
   const name = document.getElementById('newItemName').value.trim();
   const spec = document.getElementById('newItemSpec').value.trim();
   const unit = document.getElementById('newItemUnit').value.trim();
-  if (!code) { toast('❌ 請填識別碼', true); return; }
+  // 識別碼由 autoGenCode 自動產生，已在下方驗證
   if (!name) { toast('❌ 請填品項名稱', true); return; }
-  if (ITEMS.find(i => i.code === code)) { toast('❌ 識別碼已存在：' + code, true); return; }
+  if (!code) { toast('❌ 請先選擇類別（自動產生識別碼）', true); return; }
+  if (ITEMS.find(i => i.code === code)) { toast('❌ 識別碼已存在：' + code + '，請重新選擇類別', true); autoGenCode(); return; }
+
+  // 重複判斷：品名+規格都一樣才算重複
+  const exactDup = ITEMS.find(i => i.name === name && i.spec === spec && spec !== '');
+  if (exactDup) {
+    toast('❌ 已有完全相同的品項：' + exactDup.code + ' ' + exactDup.name + ' ' + exactDup.spec, true);
+    return;
+  }
+  // 只有品名相同（規格不同或都是空的），給警告但允許繼續
+  const nameDup = ITEMS.find(i => i.name === name && i.code !== code);
+  if (nameDup) {
+    const go = confirm('⚠️ 已有同名品項：' + nameDup.code + ' ' + nameDup.name + '\n規格：' + (nameDup.spec||'（無規格）') + '\n\n確定這是不同規格的新品項嗎？');
+    if (!go) return;
+  }
   const newItem = { code, name, spec, unit, cat, custom: true };
   const custom = getCustomItems();
   custom.push(newItem);
