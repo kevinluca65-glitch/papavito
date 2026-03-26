@@ -580,7 +580,7 @@ body { background: var(--bg); color: var(--text); font-family: 'PingFang TC','No
 <!-- Firebase SDK -->
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getFirestore, collection, addDoc, deleteDoc, doc, query, orderBy, onSnapshot, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import { getFirestore, collection, addDoc, deleteDoc, doc, updateDoc, query, orderBy, onSnapshot, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyCMoEsFZJ6vcDIsDvu8oB89bTx7gJDtPYc",
@@ -604,6 +604,7 @@ try {
   window._orderBy = orderBy;
   window._onSnapshot = onSnapshot;
   window._serverTimestamp = serverTimestamp;
+  window._updateDoc = updateDoc;
 
   // 直接在這裡啟動監聽，不依賴外部函數
   const q = query(collection(db, 'entries'), orderBy('date', 'desc'));
@@ -802,6 +803,172 @@ function toggleMisc() {
   const on = document.getElementById('miscCheck').checked;
   document.getElementById('miscSection').style.display = on ? 'block' : 'none';
   if (on) clearSelected();
+}
+
+// ============ EDITABLE CHECK ============
+function isEditable(r) {
+  if (!r.createdAt || !r.createdAt.seconds) return false;
+  var created = r.createdAt.seconds * 1000;
+  return (Date.now() - created) < 24 * 60 * 60 * 1000; // 24小時
+}
+function tfIsEditable(r) { return isEditable(r); }
+
+// ============ EDIT RECORD ============
+var editingRecordId = null;
+var editingTfId = null;
+
+function editRecord(id) {
+  var r = (window.allRecords || []).find(function(x){ return x.id === id; });
+  if (!r) return;
+  editingRecordId = id;
+  document.getElementById('editItemName').textContent = r.name + '　' + r.date + '　' + (r.vendor||'');
+  document.getElementById('editDate').value = r.date || '';
+  document.getElementById('editQty').value = r.qty || '';
+  document.getElementById('editPrice').value = r.price || '';
+  document.getElementById('editVendor').value = r.vendor || '';
+  document.getElementById('editInvoice').value = r.invoice && r.invoice !== '待補' ? r.invoice : '';
+  document.getElementById('editOverlay').style.display = 'block';
+}
+
+function closeEditOverlay() {
+  document.getElementById('editOverlay').style.display = 'none';
+  editingRecordId = null;
+}
+
+async function saveEditRecord() {
+  if (!editingRecordId) return;
+  var date = document.getElementById('editDate').value;
+  var qty = parseFloat(document.getElementById('editQty').value);
+  var price = parseFloat(document.getElementById('editPrice').value);
+  var vendor = document.getElementById('editVendor').value.trim();
+  var invoice = document.getElementById('editInvoice').value.trim().toUpperCase();
+  if (!date) { toast('❌ 請選擇日期', true); return; }
+  if (isNaN(qty)||qty<=0) { toast('❌ 請輸入數量', true); return; }
+  if (isNaN(price)||price<0) { toast('❌ 請輸入單價', true); return; }
+  // 重新計算金額
+  var r = (window.allRecords||[]).find(function(x){ return x.id === editingRecordId; });
+  var taxRate = (r && r.tax) ? Number(r.tax) : 0;
+  var sub = Math.round(qty * price);
+  var total = Math.round(sub * (1 + taxRate));
+  var updates = {
+    date: String(date), qty: Number(qty), price: Number(price),
+    subtotal: Number(sub), total: Number(total),
+    vendor: String(vendor), invoice: String(invoice||'待補'),
+    editedBy: String(currentOperator||'未知'),
+    editedAt: window._serverTimestamp()
+  };
+  try {
+    var docRef = window._doc(window._db, 'entries', editingRecordId);
+    await window._updateDoc(docRef, updates);
+    closeEditOverlay();
+    toast('✅ 修改已儲存');
+  } catch(e) { toast('❌ 儲存失敗：' + e.message, true); }
+}
+
+function editTransfer(id) {
+  var r = (window.allTransfers || []).find(function(x){ return x.id === id; });
+  if (!r) return;
+  editingTfId = id;
+  document.getElementById('editTfItemName').textContent = r.name + '　' + tfSName(r.fromStore) + '→' + tfSName(r.toStore);
+  document.getElementById('editTfDate').value = r.date || '';
+  document.getElementById('editTfQty').value = r.qty || '';
+  document.getElementById('editTfPaid').value = r.paid || '未付';
+  document.getElementById('editTfPaidAmt').value = r.paidAmount || '';
+  document.getElementById('editTfOverlay').style.display = 'block';
+}
+
+function closeEditTfOverlay() {
+  document.getElementById('editTfOverlay').style.display = 'none';
+  editingTfId = null;
+}
+
+async function saveEditTransfer() {
+  if (!editingTfId) return;
+  var date = document.getElementById('editTfDate').value;
+  var qty = parseFloat(document.getElementById('editTfQty').value);
+  var paid = document.getElementById('editTfPaid').value;
+  var paidAmt = parseFloat(document.getElementById('editTfPaidAmt').value)||0;
+  if (!date) { toast('❌ 請選擇日期', true); return; }
+  if (isNaN(qty)||qty<=0) { toast('❌ 請輸入數量', true); return; }
+  var updates = {
+    date: String(date), qty: Number(qty),
+    paid: String(paid), paidAmount: Number(paidAmt),
+    editedBy: String(currentOperator||'未知'),
+    editedAt: window._serverTimestamp()
+  };
+  try {
+    var docRef = window._doc(window._db, 'transfers', editingTfId);
+    await window._updateDoc(docRef, updates);
+    closeEditTfOverlay();
+    toast('✅ 修改已儲存');
+  } catch(e) { toast('❌ 儲存失敗：' + e.message, true); }
+}
+
+// ============ EDIT RECORD ============
+let editingId = null;
+
+function openEdit(id) {
+  const r = (window.allRecords || []).find(x => x.id === id);
+  if (!r) { toast('找不到記錄', true); return; }
+  if (!canEdit(r)) { toast('❌ 超過24小時，無法編輯', true); return; }
+
+  editingId = id;
+  document.getElementById('editDate').value = r.date || '';
+  document.getElementById('editQty').value = r.qty || '';
+  document.getElementById('editPrice').value = r.price || '';
+  document.getElementById('editVendor').value = r.vendor || '';
+  document.getElementById('editInvoice').value = r.invoice || '';
+  document.getElementById('editOverlay').style.display = 'block';
+  window.scrollTo({top:0});
+}
+
+function closeEdit() {
+  editingId = null;
+  document.getElementById('editOverlay').style.display = 'none';
+}
+
+async function saveEdit() {
+  if (!editingId) return;
+  const r = (window.allRecords || []).find(x => x.id === editingId);
+  if (!r || !canEdit(r)) { toast('❌ 超過24小時，無法編輯', true); closeEdit(); return; }
+
+  const date = document.getElementById('editDate').value;
+  const qty = parseFloat(document.getElementById('editQty').value);
+  const price = parseFloat(document.getElementById('editPrice').value);
+  const vendor = document.getElementById('editVendor').value.trim();
+  const invoice = document.getElementById('editInvoice').value.trim().toUpperCase();
+
+  if (!date) { toast('❌ 請選擇日期', true); return; }
+  if (isNaN(qty) || qty <= 0) { toast('❌ 請輸入數量', true); return; }
+  if (isNaN(price) || price < 0) { toast('❌ 請輸入單價', true); return; }
+
+  const tax = r.tax || 0;
+  const sub = Math.round(qty * price);
+  const total = Math.round(sub * (1 + tax));
+
+  const updates = {
+    date: String(date),
+    qty: Number(qty),
+    price: Number(price),
+    subtotal: Number(sub),
+    total: Number(total),
+    vendor: String(vendor),
+    invoice: String(invoice || '待補')
+  };
+
+  document.getElementById('uploadingOverlay').style.display = 'flex';
+  document.getElementById('uploadingMsg').textContent = '儲存修改中...';
+  try {
+    // 用 updateDoc 更新（只改指定欄位）
+    const { doc, updateDoc } = await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js');
+    await updateDoc(doc(window._db, 'entries', editingId), updates);
+    document.getElementById('uploadingOverlay').style.display = 'none';
+    toast('✅ 修改已儲存');
+    closeEdit();
+  } catch(e) {
+    document.getElementById('uploadingOverlay').style.display = 'none';
+    toast('❌ 儲存失敗：' + e.message, true);
+  }
 }
 
 // ============ DUPLICATE CHECK ============
@@ -1020,7 +1187,7 @@ async function saveEntry() {
     if (wq) wq.value = '';
     const tp = document.getElementById('totalPaid');
     if (tp) tp.value = '';
-    document.getElementById('invoice').value = '';
+    // invoice 保留不重置（員工只需打末4碼）
     document.getElementById('totalPreview').textContent = '—';
     clearSelected();
     document.getElementById('miscCheck').checked = false;
@@ -1259,10 +1426,18 @@ function renderRecords() {
         ${r.invoice && r.invoice!=='待補'?`<span class="ri-tag">📄${r.invoice}</span>`:'<span class="ri-tag" style="color:var(--text3);">📄待補</span>'}
         ${r.vendor?`<span class="ri-tag">🏭${r.vendor}</span>`:''}
         ${r.operator?`<span class="ri-tag" style="color:#9a9590;">👤${r.operator}</span>`:''}
+        ${canEdit(r) ? `<span class="ri-tag" onclick="openEdit('${r.id}')" style="color:#5ba5e8;cursor:pointer;">✏️ 編輯</span>` : ''}
         <span class="ri-tag del" onclick="deleteRecord('${r.id}')">🗑 刪除</span>
       </div>
     </div>`).join('');
 }
+function canEdit(r) {
+  if (!r.createdAt || !r.createdAt.seconds) return false;
+  const created = r.createdAt.seconds * 1000;
+  const now = Date.now();
+  return (now - created) < 24 * 60 * 60 * 1000; // 24小時
+}
+
 async function deleteRecord(id) {
   checkAdminAuth(async function() {
     if (!confirm('確定刪除這筆記錄？')) return;
@@ -1775,6 +1950,48 @@ async function saveTf() {
 
 function tfSName(s) { var ss=String(s); return ss==='1'?'🏠天母':ss==='2'?'🏪昌吉':ss==='PVK'?'🍳PVK':ss==='M'?'👤Monica':ss==='K'?'👤Kevin':ss==='0'?'🏢非門店':ss==='F'?'❄️冷凍':ss; }
 
+function canEditTf(r) {
+  if (!r.createdAt || !r.createdAt.seconds) return false;
+  return (Date.now() - r.createdAt.seconds * 1000) < 24 * 60 * 60 * 1000;
+}
+
+var editingTfId = null;
+function openTfEdit(id) {
+  const r = (window.allTransfers || []).find(x => x.id === id);
+  if (!r || !canEditTf(r)) { toast('❌ 超過24小時，無法編輯', true); return; }
+  editingTfId = id;
+  // 用 prompt 簡單編輯數量和付款金額
+  const newQty = prompt('修改數量（目前：' + r.qty + ' ' + (r.unit||'') + '）', r.qty);
+  if (newQty === null) return;
+  const qty = parseFloat(newQty);
+  if (isNaN(qty) || qty <= 0) { toast('❌ 數量不正確', true); return; }
+
+  const newPaid = confirm('付款狀態：按「確定」= 已付，按「取消」= 未付');
+  const paidStatus = newPaid ? '已付' : '未付';
+  let paidAmt = r.paidAmount || 0;
+  if (newPaid) {
+    const amtStr = prompt('付款金額（元）', paidAmt);
+    if (amtStr === null) return;
+    paidAmt = parseFloat(amtStr) || 0;
+  }
+
+  (async function() {
+    document.getElementById('uploadingOverlay').style.display = 'flex';
+    document.getElementById('uploadingMsg').textContent = '儲存修改中...';
+    try {
+      const { doc, updateDoc } = await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js');
+      await updateDoc(doc(window._db, 'transfers', id), {
+        qty: Number(qty), paid: paidStatus, paidAmount: Number(paidAmt)
+      });
+      document.getElementById('uploadingOverlay').style.display = 'none';
+      toast('✅ 調撥記錄已更新');
+    } catch(e) {
+      document.getElementById('uploadingOverlay').style.display = 'none';
+      toast('❌ 更新失敗：' + e.message, true);
+    }
+  })();
+}
+
 function renderTf() {
   var month = document.getElementById('tfMonth') ? document.getElementById('tfMonth').value : '';
   var r = allTransfers.filter(function(x){ return !month||(x.date&&x.date.startsWith(month)); });
@@ -1799,6 +2016,7 @@ function renderTf() {
       (x.serial?'<span style="background:#242424;border-radius:4px;padding:2px 7px;font-size:11px;color:#9a9590;">📋'+x.serial+'</span>':'') +
       '<span style="background:#242424;border-radius:4px;padding:2px 7px;font-size:11px;color:' + (x.paid==='已付'?'#4caf72':'#f5a623') + ';">' + (x.paid==='已付'?'✅已付':'⏳未付') + '</span>' +
       '<span style="background:#242424;border-radius:4px;padding:2px 7px;font-size:11px;color:#9a9590;">👤' + (x.operator||'') + '</span>' +
+      (isEditable(x) ? '<span onclick="editTransfer(\'' + x.id + '\')" style="background:#1a2a3a;border-radius:4px;padding:2px 7px;font-size:11px;color:#5ba5e8;cursor:pointer;">✏️ 編輯</span>' : '') +
       '<span onclick="deleteTf(\'' + x.id + '\')" style="background:#2a1515;border-radius:4px;padding:2px 7px;font-size:11px;color:#e05050;cursor:pointer;">🗑</span>' +
       '</div></div>';
   }).join('');
@@ -1830,6 +2048,111 @@ function exportTfCSV(skipAuth) {
 }
 
 </script>
+
+<!-- EDIT RECORD OVERLAY -->
+<div id="editOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:9995;overflow-y:auto;padding:20px;">
+  <div style="background:#1a1a1a;border:1px solid #2e2e2e;border-radius:16px;padding:20px;max-width:400px;margin:0 auto;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+      <div style="font-size:16px;font-weight:700;color:#f0ede8;">✏️ 編輯記錄</div>
+      <span onclick="closeEditOverlay()" style="color:#9a9590;font-size:20px;cursor:pointer;">✕</span>
+    </div>
+    <div id="editItemName" style="font-size:13px;color:#9a9590;margin-bottom:14px;"></div>
+
+    <div style="margin-bottom:10px;">
+      <label style="display:block;font-size:12px;color:#9a9590;margin-bottom:4px;font-weight:600;">發票日期</label>
+      <input type="date" id="editDate" style="width:100%;background:#242424;border:1px solid #2e2e2e;border-radius:8px;padding:10px 12px;color:#f0ede8;font-size:15px;font-family:inherit;outline:none;">
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;">
+      <div>
+        <label style="display:block;font-size:12px;color:#9a9590;margin-bottom:4px;font-weight:600;">數量</label>
+        <input type="number" id="editQty" step="0.1" min="0" inputmode="decimal" style="width:100%;background:#242424;border:1px solid #2e2e2e;border-radius:8px;padding:10px 12px;color:#f0ede8;font-size:15px;font-family:inherit;outline:none;">
+      </div>
+      <div>
+        <label style="display:block;font-size:12px;color:#9a9590;margin-bottom:4px;font-weight:600;">單價（未稅）</label>
+        <input type="number" id="editPrice" step="0.01" min="0" inputmode="decimal" style="width:100%;background:#242424;border:1px solid #2e2e2e;border-radius:8px;padding:10px 12px;color:#f0ede8;font-size:15px;font-family:inherit;outline:none;">
+      </div>
+    </div>
+    <div style="margin-bottom:10px;">
+      <label style="display:block;font-size:12px;color:#9a9590;margin-bottom:4px;font-weight:600;">廠商</label>
+      <input type="text" id="editVendor" style="width:100%;background:#242424;border:1px solid #2e2e2e;border-radius:8px;padding:10px 12px;color:#f0ede8;font-size:15px;font-family:inherit;outline:none;">
+    </div>
+    <div style="margin-bottom:16px;">
+      <label style="display:block;font-size:12px;color:#9a9590;margin-bottom:4px;font-weight:600;">發票號碼</label>
+      <input type="text" id="editInvoice" style="width:100%;background:#242424;border:1px solid #2e2e2e;border-radius:8px;padding:10px 12px;color:#f0ede8;font-size:15px;font-family:inherit;outline:none;text-transform:uppercase;">
+    </div>
+    <button onclick="saveEditRecord()" style="width:100%;background:#e8502a;color:white;border:none;border-radius:10px;padding:13px;font-size:15px;font-weight:700;font-family:inherit;cursor:pointer;margin-bottom:8px;">💾 儲存修改</button>
+    <button onclick="closeEditOverlay()" style="width:100%;background:transparent;border:1px solid #2e2e2e;border-radius:10px;padding:11px;font-size:14px;color:#9a9590;font-family:inherit;cursor:pointer;">取消</button>
+  </div>
+</div>
+
+<!-- EDIT TRANSFER OVERLAY -->
+<div id="editTfOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:9995;overflow-y:auto;padding:20px;">
+  <div style="background:#1a1a1a;border:1px solid #2e2e2e;border-radius:16px;padding:20px;max-width:400px;margin:0 auto;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+      <div style="font-size:16px;font-weight:700;color:#f0ede8;">✏️ 編輯調撥記錄</div>
+      <span onclick="closeEditTfOverlay()" style="color:#9a9590;font-size:20px;cursor:pointer;">✕</span>
+    </div>
+    <div id="editTfItemName" style="font-size:13px;color:#9a9590;margin-bottom:14px;"></div>
+    <div style="margin-bottom:10px;">
+      <label style="display:block;font-size:12px;color:#9a9590;margin-bottom:4px;font-weight:600;">調撥日期</label>
+      <input type="date" id="editTfDate" style="width:100%;background:#242424;border:1px solid #2e2e2e;border-radius:8px;padding:10px 12px;color:#f0ede8;font-size:15px;font-family:inherit;outline:none;">
+    </div>
+    <div style="margin-bottom:10px;">
+      <label style="display:block;font-size:12px;color:#9a9590;margin-bottom:4px;font-weight:600;">數量</label>
+      <input type="number" id="editTfQty" step="0.1" min="0" inputmode="decimal" style="width:100%;background:#242424;border:1px solid #2e2e2e;border-radius:8px;padding:10px 12px;color:#f0ede8;font-size:15px;font-family:inherit;outline:none;">
+    </div>
+    <div style="margin-bottom:10px;">
+      <label style="display:block;font-size:12px;color:#9a9590;margin-bottom:4px;font-weight:600;">付款狀態</label>
+      <select id="editTfPaid" style="width:100%;background:#242424;border:1px solid #2e2e2e;border-radius:8px;padding:10px 12px;color:#f0ede8;font-size:15px;font-family:inherit;outline:none;">
+        <option value="未付">⏳ 未付款</option>
+        <option value="已付">✅ 當場已付</option>
+      </select>
+    </div>
+    <div id="editTfAmtWrap" style="margin-bottom:16px;">
+      <label style="display:block;font-size:12px;color:#9a9590;margin-bottom:4px;font-weight:600;">付款金額（元）</label>
+      <input type="number" id="editTfPaidAmt" step="1" min="0" inputmode="decimal" style="width:100%;background:#242424;border:1px solid #2e2e2e;border-radius:8px;padding:10px 12px;color:#f0ede8;font-size:15px;font-family:inherit;outline:none;">
+    </div>
+    <button onclick="saveEditTransfer()" style="width:100%;background:#5ba5e8;color:white;border:none;border-radius:10px;padding:13px;font-size:15px;font-weight:700;font-family:inherit;cursor:pointer;margin-bottom:8px;">💾 儲存修改</button>
+    <button onclick="closeEditTfOverlay()" style="width:100%;background:transparent;border:1px solid #2e2e2e;border-radius:10px;padding:11px;font-size:14px;color:#9a9590;font-family:inherit;cursor:pointer;">取消</button>
+  </div>
+</div>
+
+<!-- EDIT OVERLAY -->
+<div id="editOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:9995;overflow-y:auto;padding:20px;">
+  <div style="background:#1a1a1a;border:1px solid #2e2e2e;border-radius:16px;padding:20px;width:100%;max-width:480px;margin:0 auto;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+      <div style="font-size:16px;font-weight:700;color:#f0ede8;">✏️ 編輯記錄</div>
+      <span onclick="closeEdit()" style="color:#9a9590;font-size:20px;cursor:pointer;">✕</span>
+    </div>
+    <div style="font-size:11px;color:#f5a623;margin-bottom:14px;">⏰ 只能在24小時內編輯</div>
+
+    <div style="margin-bottom:10px;">
+      <label style="display:block;font-size:12px;color:#9a9590;margin-bottom:4px;font-weight:600;">發票 / 收據日期</label>
+      <input type="date" id="editDate" style="width:100%;background:#242424;border:1px solid #2e2e2e;border-radius:8px;padding:10px 12px;color:#f0ede8;font-size:15px;font-family:inherit;outline:none;">
+    </div>
+    <div style="margin-bottom:10px;">
+      <label style="display:block;font-size:12px;color:#9a9590;margin-bottom:4px;font-weight:600;">數量</label>
+      <input type="number" id="editQty" step="0.1" min="0" inputmode="decimal" style="width:100%;background:#242424;border:1px solid #2e2e2e;border-radius:8px;padding:10px 12px;color:#f0ede8;font-size:15px;font-family:inherit;outline:none;">
+    </div>
+    <div style="margin-bottom:10px;">
+      <label style="display:block;font-size:12px;color:#9a9590;margin-bottom:4px;font-weight:600;">未稅單價（元）</label>
+      <input type="number" id="editPrice" step="0.01" min="0" inputmode="decimal" style="width:100%;background:#242424;border:1px solid #2e2e2e;border-radius:8px;padding:10px 12px;color:#f0ede8;font-size:15px;font-family:inherit;outline:none;">
+    </div>
+    <div style="margin-bottom:10px;">
+      <label style="display:block;font-size:12px;color:#9a9590;margin-bottom:4px;font-weight:600;">廠商</label>
+      <input type="text" id="editVendor" style="width:100%;background:#242424;border:1px solid #2e2e2e;border-radius:8px;padding:10px 12px;color:#f0ede8;font-size:15px;font-family:inherit;outline:none;">
+    </div>
+    <div style="margin-bottom:10px;">
+      <label style="display:block;font-size:12px;color:#9a9590;margin-bottom:4px;font-weight:600;">發票號碼</label>
+      <input type="text" id="editInvoice" style="width:100%;background:#242424;border:1px solid #2e2e2e;border-radius:8px;padding:10px 12px;color:#f0ede8;font-size:15px;font-family:inherit;outline:none;text-transform:uppercase;">
+    </div>
+    <div style="background:#242424;border-radius:8px;padding:10px 12px;margin-bottom:14px;font-size:12px;color:#9a9590;">
+      品項、店別、類別不可修改，如需更改請刪除後重新輸入。
+    </div>
+    <button onclick="saveEdit()" style="width:100%;background:#e8502a;color:white;border:none;border-radius:10px;padding:13px;font-size:15px;font-weight:700;font-family:inherit;cursor:pointer;margin-bottom:8px;">💾 儲存修改</button>
+    <button onclick="closeEdit()" style="width:100%;background:transparent;border:1px solid #2e2e2e;border-radius:10px;padding:11px;font-size:14px;color:#9a9590;font-family:inherit;cursor:pointer;">取消</button>
+  </div>
+</div>
 
 <!-- ADMIN PASSWORD OVERLAY -->
 <div id="adminOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:9999;flex-direction:column;align-items:center;justify-content:center;padding:32px;">
