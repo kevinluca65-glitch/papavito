@@ -380,7 +380,7 @@ body { background: var(--bg); color: var(--text); font-family: 'PingFang TC','No
         </div>
       </div>
       <div class="field">
-        <label>發票／流水號 <span style="color:var(--text3);font-weight:400;">（格式:ZM12345678，選填，月結可填「月結」）</span></label>
+        <label>發票／流水號 <span style="color:var(--text3);font-weight:400;">（格式:AB12345678，選填，月結可填「月結」）</span></label>
         <input type="text" id="invoice" placeholder="發票號碼（月結廠商填「月結」）" style="text-transform:uppercase">
       </div>
     </div>
@@ -2022,6 +2022,22 @@ async function saveTf() {
   if (tfIsMisc && !tfMiscName) { toast('❌ 請填寫品項描述', true); return; }
   if (isNaN(qtyVal) || qtyVal <= 0) { toast('❌ 請輸入數量', true); return; }
   if (curTfPaid === '已付' && paidAmt <= 0) { toast('❌ 請填寫付款金額', true); return; }
+
+  // ── 重複調撥檢查 ──
+  var tfCheckName = tfIsMisc ? tfMiscName : (tfSelItem ? tfSelItem.name : '');
+  var tfDup = (window.allTransfers || []).find(function(r) {
+    return r.date === date &&
+           String(r.fromStore) === String(from) &&
+           String(r.toStore) === String(to) &&
+           r.name === tfCheckName;
+  });
+  if (tfDup) {
+    var dupMsg = '⚠️ 可能有重複調撥記錄！\n\n已有一筆：' + tfDup.date +
+      ' ' + tfSName(tfDup.fromStore) + '→' + tfSName(tfDup.toStore) +
+      '\n品項：' + tfDup.name + ' × ' + tfDup.qty + (tfDup.unit||'') +
+      '\n\n確定要繼續儲存嗎？';
+    if (!confirm(dupMsg)) return;
+  }
   var data = {
     date: String(date), fromStore: String(from), toStore: String(to),
     code: String(tfSelItem.code), name: String(tfSelItem.name),
