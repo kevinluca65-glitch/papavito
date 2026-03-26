@@ -1264,11 +1264,13 @@ function renderRecords() {
     </div>`).join('');
 }
 async function deleteRecord(id) {
-  if (!confirm('確定刪除這筆記錄？')) return;
-  try {
-    await window._deleteDoc(window._doc(window._db,'entries',id));
-    toast('已刪除');
-  } catch(e) { toast('❌ 刪除失敗', true); }
+  checkAdminAuth(async function() {
+    if (!confirm('確定刪除這筆記錄？')) return;
+    try {
+      await window._deleteDoc(window._doc(window._db,'entries',id));
+      toast('已刪除');
+    } catch(e) { toast('❌ 刪除失敗', true); }
+  });
 }
 
 // ============ PHOTO VIEWER ============
@@ -1632,6 +1634,22 @@ function closeAdminOverlay() {
 }
 
 // ── TRANSFER ─────────────────────────────────────────────────
+// ── TRANSFER MISC ────────────────────────────────────────────
+function toggleTfMisc() {
+  var on = document.getElementById('tfMiscChk').checked;
+  document.getElementById('tfMiscSec').style.display = on ? 'block' : 'none';
+  if (on) {
+    clearTfSel();
+    document.getElementById('tfSearchInput').value = '';
+    document.getElementById('tfSearchInput').disabled = true;
+    document.getElementById('tfSearchInput').style.opacity = '0.4';
+  } else {
+    document.getElementById('tfSearchInput').disabled = false;
+    document.getElementById('tfSearchInput').style.opacity = '1';
+    document.getElementById('tfMiscName').value = '';
+  }
+}
+
 var allTransfers = [];
 var tfSelItem = null;
 var curTfPaid = '未付';
@@ -1723,7 +1741,10 @@ async function saveTf() {
   if (!to) { toast('❌ 請選擇轉入店', true); return; }
   if (from === to) { toast('❌ 轉出和轉入不能相同', true); return; }
   if (!date) { toast('❌ 請選擇日期', true); return; }
-  if (!tfSelItem) { toast('❌ 請選擇品項', true); return; }
+  var tfIsMisc = document.getElementById('tfMiscChk') && document.getElementById('tfMiscChk').checked;
+  var tfMiscName = tfIsMisc ? (document.getElementById('tfMiscName').value.trim()) : '';
+  if (!tfIsMisc && !tfSelItem) { toast('❌ 請選擇品項', true); return; }
+  if (tfIsMisc && !tfMiscName) { toast('❌ 請填寫品項描述', true); return; }
   if (isNaN(qtyVal) || qtyVal <= 0) { toast('❌ 請輸入數量', true); return; }
   if (curTfPaid === '已付' && paidAmt <= 0) { toast('❌ 請填寫付款金額', true); return; }
   var data = {
@@ -1784,9 +1805,11 @@ function renderTf() {
 }
 
 async function deleteTf(id) {
-  if (!confirm('確定刪除？')) return;
-  try { await window._deleteDoc(window._doc(window._db,'transfers',id)); toast('已刪除'); }
-  catch(e) { toast('❌ 刪除失敗', true); }
+  checkAdminAuth(async function() {
+    if (!confirm('確定刪除？')) return;
+    try { await window._deleteDoc(window._doc(window._db,'transfers',id)); toast('已刪除'); }
+    catch(e) { toast('❌ 刪除失敗', true); }
+  });
 }
 
 function exportTfCSV(skipAuth) {
@@ -1895,6 +1918,15 @@ function exportTfCSV(skipAuth) {
           <div style="flex:1;"><div id="tfSbName" style="font-size:13px;font-weight:700;color:#f0ede8;"></div><div id="tfSbSpec" style="font-size:11px;color:#9a9590;margin-top:1px;"></div></div>
           <span onclick="clearTfSel()" style="color:#5a5550;font-size:18px;cursor:pointer;line-height:1;">✕</span>
         </div>
+      </div>
+      <!-- 無識別碼品項 -->
+      <label style="display:flex;align-items:center;gap:8px;margin-top:8px;font-size:13px;color:#9a9590;cursor:pointer;">
+        <input type="checkbox" id="tfMiscChk" onchange="toggleTfMisc()" style="width:16px;height:16px;accent-color:#e8502a;">
+        無識別碼品項（手動填寫）
+      </label>
+      <div id="tfMiscSec" style="display:none;background:#1a1a1a;border:1px solid #2e2e2e;border-radius:8px;padding:11px;margin-top:8px;">
+        <div style="font-size:12px;color:#9a9590;margin-bottom:6px;">填寫品項描述</div>
+        <input type="text" id="tfMiscName" placeholder="如：豬肉丸半成品、醬料..." style="width:100%;background:#242424;border:1px solid #2e2e2e;border-radius:8px;padding:10px 12px;color:#f0ede8;font-size:15px;font-family:inherit;outline:none;">
       </div>
       <div style="margin-bottom:10px;">
         <label id="tfQtyLabel" style="display:block;font-size:12px;color:#9a9590;margin-bottom:4px;font-weight:600;">數量</label>
