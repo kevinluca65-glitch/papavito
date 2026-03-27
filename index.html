@@ -380,7 +380,7 @@ body { background: var(--bg); color: var(--text); font-family: 'PingFang TC','No
         </div>
       </div>
       <div class="field">
-        <label>發票／流水號 <span style="color:var(--text3);font-weight:400;">（格式:AB12345678，選填，月結可填「月結」）</span></label>
+        <label>發票／流水號 <span style="color:var(--text3);font-weight:400;">（選填，月結可填「月結」）</span></label>
         <input type="text" id="invoice" placeholder="發票號碼（月結廠商填「月結」）" style="text-transform:uppercase">
       </div>
     </div>
@@ -846,6 +846,9 @@ function clearSelected() {
   selectedItem = null;
   document.getElementById('searchInput').value = '';
   document.getElementById('selBadge').classList.remove('on');
+  // 重置數量 label
+  const lbl = document.getElementById('qtyLabel');
+  if (lbl) lbl.textContent = '數量';
   isWeightMode = false;
   document.getElementById('normalMode').style.display = 'block';
   document.getElementById('weightMode').style.display = 'none';
@@ -1629,6 +1632,13 @@ function checkWeightMode() {
   if (useWeight) {
     const lbl = document.getElementById('weightLabel');
     if (lbl) lbl.textContent = '重量（' + selectedItem.unit + '）';
+  } else {
+    // 非重量模式：在「數量」後面顯示單位，讓員工清楚知道該填什麼
+    const lbl = document.getElementById('qtyLabel');
+    if (lbl) {
+      const unit = selectedItem ? selectedItem.unit : '';
+      lbl.textContent = unit ? '數量（' + unit + '）' : '數量';
+    }
   }
 }
 
