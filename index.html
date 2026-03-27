@@ -163,7 +163,7 @@ body { background: var(--bg); color: var(--text); font-family: 'PingFang TC','No
 .stat-box .sl { font-size: 11px; color: var(--text2); margin-top: 3px; }
 
 /* TOAST */
-.toast { position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%) translateY(20px); background: var(--green); color: white; padding: 10px 20px; border-radius: 20px; font-size: 14px; font-weight: 700; opacity: 0; transition: all 0.3s; z-index: 2000; pointer-events: none; white-space: nowrap; }
+.toast { position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%) translateY(20px); background: var(--green); color: white; padding: 10px 20px; border-radius: 20px; font-size: 14px; font-weight: 700; opacity: 0; transition: all 0.3s; z-index: 99999; pointer-events: none; white-space: nowrap; }
 .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 .toast.err { background: #c0392b; }
 
@@ -967,7 +967,6 @@ function openEdit(id) {
   const r = (window.allRecords || []).find(x => x.id === id);
   if (!r) { toast('找不到記錄', true); return; }
   if (!canEdit(r)) { toast('❌ 超過24小時，無法編輯', true); return; }
-
   editingId = id;
   document.getElementById('editDate').value = r.date || '';
   document.getElementById('editQty').value = r.qty || '';
@@ -984,9 +983,9 @@ function closeEdit() {
 }
 
 async function saveEdit() {
-  if (!editingId) return;
+  if (!editingId) { toast('❌ 錯誤：沒有選中的記錄', true); return; }
   const r = (window.allRecords || []).find(x => x.id === editingId);
-  if (!r || !canEdit(r)) { toast('❌ 超過24小時，無法編輯', true); closeEdit(); return; }
+  if (!r) { toast('❌ 找不到記錄', true); return; }
 
   const date = document.getElementById('editDate').value;
   const qty = parseFloat(document.getElementById('editQty').value);
@@ -996,7 +995,7 @@ async function saveEdit() {
 
   if (!date) { toast('❌ 請選擇日期', true); return; }
   if (isNaN(qty) || qty <= 0) { toast('❌ 請輸入數量', true); return; }
-  if (isNaN(price) || price < 0) { toast('❌ 請輸入單價', true); return; }
+  // price 允許 0（如免費品項）
 
   const tax = r.tax || 0;
   const sub = Math.round(qty * price);
