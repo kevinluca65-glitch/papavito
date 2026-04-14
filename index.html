@@ -493,7 +493,7 @@ body { background: var(--bg); color: var(--text); font-family: 'PingFang TC','No
     <div class="field-row">
       <div class="field"><label>識別碼</label><input type="text" id="newItemCode" placeholder="如 A083" style="text-transform:uppercase;"></div>
       <div class="field"><label>類別前綴</label>
-        <select id="newItemCat">
+        <select id="newItemCat" onchange="autoGenCode()">
           <option value="食材-乾貨">A - 食材乾貨</option>
           <option value="食材-冷藏">B - 食材冷藏</option>
           <option value="食材-生鮮">C - 生鮮蔬果</option>
@@ -596,6 +596,18 @@ try {
       if (exportPanel && exportPanel.classList.contains('active')) updateStats();
     }
   }, (err) => { console.warn('lockedMonths listener err:', err); });
+
+  // 監聽自訂品項（所有人即時同步）
+  onSnapshot(collection(db, 'customItems'), (snap) => {
+    window.allCustomItems = snap.docs.map(d => ({ _docId: d.id, ...d.data() }));
+    window.allCustomItems.forEach(item => {
+      if (!ITEMS.find(i => i.code === item.code)) {
+        ITEMS.push({ code: item.code, name: item.name, spec: item.spec||'', unit: item.unit||'', cat: item.cat||'', custom: true });
+      }
+    });
+    const ap = document.getElementById('panel-admin');
+    if (ap && ap.classList.contains('active') && typeof renderAdminItems === 'function') renderAdminItems();
+  }, (err) => { console.warn('customItems err:', err); });
 
   // 3秒後觸發 login 流程（不管firebase是否回來）
   setTimeout(() => {
@@ -1435,7 +1447,29 @@ function mergeCustomItems() {
   });
 }
 
-function addCustomItem() {
+function autoGenCode() {
+  const catPrefixMap = {
+    '食材-乾貨':'A','食材-冷藏':'B','食材-生鮮':'C','飲料':'D',
+    '成品':'F','包材':'G','耗材':'J','冷凍成品':'M',
+    '冷凍披薩':'P','組合商品':'Q','運費':'T'
+  };
+  const cat = document.getElementById('newItemCat').value;
+  const prefix = catPrefixMap[cat];
+  if (!prefix) { document.getElementById('newItemCode').value = ''; return; }
+  const allItems = [...ITEMS, ...(window.allCustomItems||[])];
+  const existing = allItems
+    .map(i => i.code)
+    .filter(c => c && c.charAt(0).toUpperCase() === prefix)
+    .map(c => parseInt(c.slice(1)))
+    .filter(n => !isNaN(n));
+  const maxNum = existing.length > 0 ? Math.max(...existing) : 0;
+  const nextCode = prefix + String(maxNum + 1).padStart(3, '0');
+  document.getElementById('newItemCode').value = nextCode;
+  const hint = document.getElementById('autoCodeHint');
+  if (hint) hint.textContent = '（自動產生：' + nextCode + '）';
+}
+
+async function addCustomItem() {
   const code = document.getElementById('newItemCode').value.trim().toUpperCase();
   const cat = document.getElementById('newItemCat').value;
   const name = document.getElementById('newItemName').value.trim();
@@ -1445,37 +1479,51 @@ function addCustomItem() {
   if (!name) { toast('❌ 請填品項名稱', true); return; }
   if (ITEMS.find(i => i.code === code)) { toast('❌ 識別碼已存在：' + code, true); return; }
   const newItem = { code, name, spec, unit, cat, custom: true };
-  const custom = getCustomItems();
-  custom.push(newItem);
-  saveCustomItems(custom);
-  ITEMS.push(newItem);
-  document.getElementById('newItemCode').value = '';
-  document.getElementById('newItemName').value = '';
-  document.getElementById('newItemSpec').value = '';
-  document.getElementById('newItemUnit').value = '';
-  toast('✅ 已新增：' + name);
-  renderAdminItems();
+
+  // 存到 Firebase（所有人即時可用）
+  document.getElementById('uploadingOverlay').style.display = 'flex';
+  document.getElementById('uploadingMsg').textContent = '新增品項中...';
+  try {
+    await window._addDoc(window._collection(window._db, 'customItems'), newItem);
+    document.getElementById('uploadingOverlay').style.display = 'none';
+    ITEMS.push(newItem);
+    document.getElementById('newItemCode').value = '';
+    document.getElementById('newItemName').value = '';
+    document.getElementById('newItemSpec').value = '';
+    document.getElementById('newItemUnit').value = '';
+    toast('✅ 已新增：' + name + '（所有人即可搜尋）');
+    renderAdminItems();
+  } catch(e) {
+    document.getElementById('uploadingOverlay').style.display = 'none';
+    toast('❌ 新增失敗：' + e.message, true);
+  }
 }
 
-function deleteCustomItem(code) {
-  if (!confirm('確定刪除 ' + code + '？')) return;
-  const custom = getCustomItems().filter(i => i.code !== code);
-  saveCustomItems(custom);
-  const idx = ITEMS.findIndex(i => i.code === code);
-  if (idx > -1) ITEMS.splice(idx, 1);
-  toast('已刪除');
-  renderAdminItems();
+async function deleteCustomItem(code) {
+  checkAdminAuth(async function() {
+    if (!confirm('確定刪除 ' + code + '？')) return;
+    try {
+      const item = (window.allCustomItems || []).find(i => i.code === code);
+      if (item && item._docId) {
+        await window._deleteDoc(window._doc(window._db, 'customItems', item._docId));
+      }
+      const idx = ITEMS.findIndex(i => i.code === code);
+      if (idx > -1) ITEMS.splice(idx, 1);
+      toast('已刪除：' + code);
+      renderAdminItems();
+    } catch(e) { toast('❌ 刪除失敗：' + e.message, true); }
+  });
 }
 
 function renderAdminItems() {
-  const custom = getCustomItems();
+  const arr = window.allCustomItems || [];
   const el = document.getElementById('customItemsList');
   if (!el) return;
-  if (!custom.length) {
-    el.innerHTML = '<p style="font-size:13px;color:var(--text3);text-align:center;padding:16px;">尚無自訂品項</p>';
+  if (!arr.length) {
+    el.innerHTML = '<p style="font-size:13px;color:var(--text3);text-align:center;padding:16px;">尚無自訂品項（雲端）</p>';
     return;
   }
-  el.innerHTML = custom.map(i => `
+  el.innerHTML = arr.map(i => `
     <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border);">
       <div>
         <span style="background:var(--accent);color:white;border-radius:4px;padding:2px 7px;font-size:11px;font-weight:800;margin-right:8px;">${i.code}</span>
