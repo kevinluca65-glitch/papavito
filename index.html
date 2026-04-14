@@ -1167,6 +1167,8 @@ async function saveEntry() {
     if (inputMode === 'posttax') {
       total = Math.round(finalQty * finalPrice);
       sub = taxRate > 0 ? Math.round(total / (1 + taxRate)) : total;
+      // 含稅模式：把 finalPrice 換算成未稅單價存入
+      finalPrice = finalQty > 0 ? Math.round((sub / finalQty) * 100) / 100 : 0;
     } else {
       sub = Math.round(finalQty * finalPrice);
       total = Math.round(sub * (1 + taxRate));
